@@ -31,7 +31,7 @@ export default function ChatMessage({
       className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
       <div
-        className={`relative max-w-[80%] overflow-hidden rounded-lg px-4 py-3 ${
+        className={`relative max-w-[80%] rounded-lg px-4 py-3 ${
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted border-l-4"
@@ -57,7 +57,7 @@ export default function ChatMessage({
 
         {/* Message content with Markdown rendering */}
         <div
-          className={`prose prose-sm prose-code:text-sm max-w-none wrap-break-word overflow-x-auto ${
+          className={`prose prose-sm prose-code:text-sm prose-pre:overflow-x-auto max-w-none wrap-break-word ${
             isUser
               ? "prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground prose-code:text-primary-foreground"
               : "dark:prose-invert"

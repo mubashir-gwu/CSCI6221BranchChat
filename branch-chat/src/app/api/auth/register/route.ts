@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { error: 'An account with this email already exists' },
         { status: 409 }
       );
     }

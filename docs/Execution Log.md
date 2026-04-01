@@ -148,6 +148,20 @@
 - Logout calls `signOut({ callbackUrl: "/login" })` from `next-auth/react`
 - `npm run build` passes
 
+### Revision Pass (2026-03-31)
+
+**Fixes applied: 5/5**
+
+1. **Middleware matcher pattern** — Replaced `'/(protected)/:path*'` with explicit URL paths `'/dashboard'`, `'/chat/:path*'`, `'/settings'`. Route groups are file-system only and don't appear in request URLs, so the original pattern never matched.
+2. **Auth redirect on login page** — Added server-side `auth()` check; redirects to `/dashboard` if already authenticated. Page is now async/dynamic.
+3. **Auth redirect on register page** — Same as fix #2 for the register page.
+4. **Register 409 error message** — Changed `"Email already exists"` to `"An account with this email already exists"` to match Architecture Document §5.1.
+5. **Removed unnecessary exports from auth.ts** — Removed `export const { GET, POST } = handlers;` from `src/lib/auth.ts`. These are only needed in the route handler file (`[...nextauth]/route.ts`), which already imports and re-exports them correctly.
+
+**Fixes that couldn't be applied:** None
+
+**New concerns noticed:** None
+
 ### Final Verification
 - `npm run build` passes with no errors
 - `npm run dev` starts cleanly on localhost:3000

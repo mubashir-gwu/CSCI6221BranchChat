@@ -102,3 +102,52 @@
 ### Final Verification
 - `npm run build` passes with no errors
 - `npm run dev` starts cleanly on localhost:3000
+
+---
+
+## F-03: Authentication
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### T-011: Install NextAuth v5 and bcryptjs
+- Installed `next-auth@5.0.0-beta.30`, `bcryptjs@3.0.3`, `@types/bcryptjs`
+- Pinned exact versions in `package.json` (removed `^` prefix)
+- `npm run build` passes
+
+### T-012: Implement NextAuth v5 Configuration
+- Replaced stub `src/lib/auth.ts` with full NextAuth v5 CredentialsProvider config
+- JWT session strategy, custom `/login` page, jwt/session callbacks for user.id
+- Exports: `handlers`, `auth`, `signIn`, `signOut`, plus destructured `GET`/`POST`
+- **Workaround:** `src/lib/db.ts` had an eager `MONGODB_URI` check at module scope that broke builds when auth route was imported. Changed to deferred check via `getMongoURI()` function called at connect time.
+- Deliberation saved to `docs/decisions/authentication/T-012-debate.md` and `T-012-plan.md`
+- `npm run build` passes
+
+### T-013: Implement Auth Route Handlers
+- `[...nextauth]/route.ts` imports handlers from auth config
+- `register/route.ts`: validates email/password, checks min 8 chars, checks duplicate emails (409), hashes with bcrypt 10 rounds, returns 201 `{ id, email }`
+- `npm run build` passes
+
+### T-014: Implement Auth Middleware
+- Replaced stub middleware with `export { auth as middleware }` from NextAuth v5
+- Matcher protects `(protected)` routes and API routes (conversations, llm, settings, import)
+- `/api/auth/*`, `/login`, `/register` remain public
+- `npm run build` passes
+
+### T-015: Implement Login and Register Pages + AuthProvider
+- `AuthProvider.tsx`: wraps children in `SessionProvider` from `next-auth/react`
+- `LoginForm.tsx`: email/password form, uses client-side `signIn("credentials", { redirect: false })`, redirects to `/dashboard` on success, shows error on failure, links to `/register`
+- `RegisterForm.tsx`: email/password form, calls `POST /api/auth/register`, auto-signs-in on success, shows appropriate errors (409 → "Email already exists"), links to `/login`
+- Auth pages render forms centered on screen
+- Root `layout.tsx` wraps children with `AuthProvider` and `Toaster`
+- Root `page.tsx` checks auth and redirects to `/dashboard` or `/login`
+- `npm run build` passes
+
+### T-016: Implement Logout Functionality
+- Protected layout has temporary header with "BranchChat" title and "Logout" button
+- Logout calls `signOut({ callbackUrl: "/login" })` from `next-auth/react`
+- `npm run build` passes
+
+### Final Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts cleanly on localhost:3000

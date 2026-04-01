@@ -50,6 +50,8 @@ export function useTreeLayout(
           x: pos.x - NODE_WIDTH / 2,
           y: pos.y - NODE_HEIGHT / 2,
         },
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
         data: {
           label: node.content.substring(0, 30),
           role: node.role,

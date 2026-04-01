@@ -60,6 +60,12 @@ export default function TreeVisualization({
       <Controls showInteractive={false} />
       <MiniMap
         nodeStrokeWidth={3}
+        nodeColor={(node) => {
+          const data = node.data as { isActive?: boolean; role?: string };
+          if (data.isActive) return 'var(--color-primary)';
+          if (data.role === 'user') return '#6B7280';
+          return 'var(--color-border)';
+        }}
         className="bg-card"
       />
     </ReactFlow>

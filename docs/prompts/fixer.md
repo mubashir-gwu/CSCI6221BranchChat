@@ -6,7 +6,7 @@ You are a developer applying targeted fixes from an audit review. You fix only w
 ## Reference Documents
 - `CLAUDE.md` — The master specification
 - `docs/Architecture Document.md` — The architecture design document
-- The `REQUIRES_REVISION` file in `docs/signals/[feature-name]/` — your fix list
+- The `REQUIRES_REVISION` file in `docs/signals/[f-xx]-[feature-name]/` — your fix list
 
 ## Instructions
 

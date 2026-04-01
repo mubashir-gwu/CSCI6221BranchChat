@@ -98,7 +98,7 @@ Tasks covered: [list task IDs]
 ```
 
 ### Signal File
-Based on your findings, write ONE of the following files to `docs/signals/[feature-name]/`:
+Based on your findings, write ONE of the following files to `docs/signals/[f-xx]-[feature-name]/`:
 
 **If all checks pass and no critical or medium issues:**
 → Write `VERIFIED` with content: "Audit passed. No issues found." (or list any low-severity notes)

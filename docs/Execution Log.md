@@ -165,3 +165,70 @@
 ### Final Verification
 - `npm run build` passes with no errors
 - `npm run dev` starts cleanly on localhost:3000
+
+---
+
+## F-04: Protected Layout & Conversation Management
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### T-017: Implement Shared Types
+- Implemented `src/types/database.ts` — client-side interfaces mirroring Mongoose documents (DBUser, DBApiKey, DBConversation, DBNode)
+- Implemented `src/types/api.ts` — request/response interfaces for all API endpoints
+- Implemented `src/types/tree.ts` — TreeNode interface and ChildrenMap type
+- Implemented `src/types/llm.ts` — re-exports LLMMessage, LLMResponse from providers/types
+- Implemented `src/types/export.ts` — ExportedTree interface per Architecture Document §5.6
+- Implemented `src/constants/providers.ts` — provider definitions with name, displayName, color
+- Implemented `src/constants/models.ts` — hardcoded model list with context window sizes
+- `npm run build` passes
+
+### T-018: Implement ConversationContext and UIContext
+- Deliberation conducted and saved to `docs/decisions/conversation-management/T-018-*`
+- Two-context split as specified: ConversationContext for data, UIContext for UI state
+- `ConversationContext` — state: conversations, activeConversationId, nodes (Map), activeNodeId; 9 action types via useReducer
+- `UIContext` — state: isLoading, isSidebarOpen, isTreeOpen, selectedProvider, selectedModel; 4 action types
+- Both providers use `useMemo` for context value stability
+- ConversationProvider fetches conversations on mount via `GET /api/conversations`
+- Hooks `useConversation()` and `useUI()` throw descriptive errors when used outside providers
+- `npm run build` passes
+
+### T-019: Implement Conversation API Routes
+- `GET /api/conversations` — lists user's conversations sorted by updatedAt desc
+- `POST /api/conversations` — creates conversation with title/provider/model validation
+- `PATCH /api/conversations/[id]` — renames with ownership check, title validation
+- `DELETE /api/conversations/[id]` — cascade deletes nodes then conversation with ownership check
+- All routes authenticate via `auth()` and scope queries by userId
+- `npm run build` passes
+
+### T-020: Implement Nodes API Routes
+- Implemented `src/lib/tree.ts` — getPathToRoot, buildChildrenMap, findDescendants utility functions
+- `GET /api/conversations/[id]/nodes` — returns all nodes with ownership verification
+- `DELETE /api/conversations/[id]/nodes/[nodeId]` — BFS cascading deletion with newActiveNodeId
+- `npm run build` passes
+
+### T-021: Implement Protected Layout with Conversation Sidebar
+- Updated protected layout to wrap children with ConversationProvider + UIProvider
+- Layout: sidebar (w-64) with ConversationList + logout button, main content area
+- `ConversationList` — sorted conversation items, "New Conversation" dialog with title input
+- `ConversationItem` — click navigates, inline rename, delete with ConfirmDialog
+- `ConfirmDialog` — reusable shadcn Dialog with confirm/cancel, destructive variant
+- `ToastProvider` already in root layout from F-03
+- `npm run build` passes
+
+### T-022: Implement Dashboard Page
+- Empty state: "No conversations yet" with create button
+- Returning state: "Welcome back" with sidebar prompt
+- API key banner: checks `GET /api/settings/api-keys`, shows warning when no keys configured
+- `npm run build` passes
+
+### T-023: Write Tests for Conversation and Node API
+- `__tests__/api/conversations.test.ts` — 13 tests covering GET, POST, PATCH, DELETE
+- `__tests__/api/nodes.test.ts` — 8 tests covering GET and DELETE with cascading
+- Tests mock auth, db, and Mongoose models; no external dependencies
+- All 21 tests pass via `npm test`
+
+### Final Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts cleanly on localhost:3000
+- `npm test` — 21 tests pass (2 test files)

@@ -49,3 +49,46 @@
 **Fixes that couldn't be applied:** None
 
 **New concerns noticed:** None
+
+---
+
+## F-02: Database Layer
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### T-006: Implement MongoDB Connection Singleton
+- Installed `mongoose@9.3.3`
+- Implemented `src/lib/db.ts` with global cache pattern to prevent multiple connections during Next.js hot-reload
+- Reads `MONGODB_URI` from environment, throws if undefined
+- `npm run build` passes
+
+### T-007: Implement User Model
+- Implemented `src/models/User.ts` with `IUser` interface and Mongoose schema
+- Fields: `email` (unique, lowercase, trimmed), `hashedPassword` (required), `timestamps: true`
+- Note: Removed explicit `_id: string` from interface — Mongoose 9's `Document` type already provides `_id` as `ObjectId`, and overriding to `string` causes a type conflict
+- `npm run build` passes
+
+### T-008: Implement ApiKey Model
+- Implemented `src/models/ApiKey.ts` with `IApiKey` interface
+- Fields: `userId` (ref User), `provider` (enum: openai/anthropic/gemini), `encryptedKey`, `iv`, `authTag`
+- Compound unique index on `{ userId: 1, provider: 1 }`
+- `npm run build` passes
+
+### T-009: Implement Conversation Model
+- Implemented `src/models/Conversation.ts` with `IConversation` interface
+- Fields: `userId`, `title` (maxlength 200, trimmed), `defaultProvider` (enum includes mock), `defaultModel`, `rootNodeId` (default null)
+- Index on `{ userId: 1, updatedAt: -1 }`
+- `npm run build` passes
+
+### T-010: Implement Node Model
+- Implemented `src/models/Node.ts` with `INode` interface
+- Fields: `conversationId`, `parentId` (default null), `role` (user/assistant/system), `content`, `provider` (nullable), `model` (nullable)
+- `timestamps: { createdAt: true, updatedAt: false }` — nodes are immutable
+- Two indexes: `{ conversationId: 1 }` and `{ conversationId: 1, parentId: 1 }`
+- Note: `model` field name conflicts with Mongoose `Document.model()` method. Fixed by using a standalone `INode` interface (not extending `Document`) and untyped `model()` call. Schema field name remains `model` as specified.
+- `npm run build` passes
+
+### Final Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts cleanly on localhost:3000

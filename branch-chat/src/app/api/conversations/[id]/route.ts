@@ -14,33 +14,46 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await request.json();
-  const { title } = body;
 
-  if (!title || typeof title !== "string" || title.trim().length === 0 || title.trim().length > 200) {
-    return NextResponse.json(
-      { error: "Title must be between 1 and 200 characters" },
-      { status: 400 }
+  try {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    const { title } = body;
+
+    if (!title || typeof title !== "string" || title.trim().length === 0 || title.trim().length > 200) {
+      return NextResponse.json(
+        { error: "Title must be between 1 and 200 characters" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const conversation = await Conversation.findOneAndUpdate(
+      { _id: id, userId: session.user.id },
+      { title: title.trim() },
+      { new: true }
     );
+
+    if (!conversation) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      id: conversation._id.toString(),
+      title: conversation.title,
+      updatedAt: conversation.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "CastError") {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  await connectDB();
-
-  const conversation = await Conversation.findOneAndUpdate(
-    { _id: id, userId: session.user.id },
-    { title: title.trim() },
-    { new: true }
-  );
-
-  if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({
-    id: conversation._id.toString(),
-    title: conversation.title,
-    updatedAt: conversation.updatedAt.toISOString(),
-  });
 }
 
 export async function DELETE(
@@ -54,19 +67,26 @@ export async function DELETE(
 
   const { id } = await params;
 
-  await connectDB();
+  try {
+    await connectDB();
 
-  const conversation = await Conversation.findOne({
-    _id: id,
-    userId: session.user.id,
-  });
+    const conversation = await Conversation.findOne({
+      _id: id,
+      userId: session.user.id,
+    });
 
-  if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!conversation) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await Node.deleteMany({ conversationId: id });
+    await Conversation.deleteOne({ _id: id });
+
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    if (error instanceof Error && error.name === "CastError") {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  await Node.deleteMany({ conversationId: id });
-  await Conversation.deleteOne({ _id: id });
-
-  return NextResponse.json({ deleted: true });
 }

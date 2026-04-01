@@ -15,28 +15,35 @@ export async function GET(
 
   const { id } = await params;
 
-  await connectDB();
+  try {
+    await connectDB();
 
-  const conversation = await Conversation.findOne({
-    _id: id,
-    userId: session.user.id,
-  });
+    const conversation = await Conversation.findOne({
+      _id: id,
+      userId: session.user.id,
+    });
 
-  if (!conversation) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!conversation) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const nodes = await Node.find({ conversationId: id }).lean();
+
+    return NextResponse.json({
+      nodes: nodes.map((n) => ({
+        id: n._id.toString(),
+        parentId: n.parentId?.toString() ?? null,
+        role: n.role,
+        content: n.content,
+        provider: n.provider ?? null,
+        model: n.model ?? null,
+        createdAt: n.createdAt.toISOString(),
+      })),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "CastError") {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const nodes = await Node.find({ conversationId: id }).lean();
-
-  return NextResponse.json({
-    nodes: nodes.map((n) => ({
-      id: n._id.toString(),
-      parentId: n.parentId?.toString() ?? null,
-      role: n.role,
-      content: n.content,
-      provider: n.provider ?? null,
-      model: n.model ?? null,
-      createdAt: n.createdAt.toISOString(),
-    })),
-  });
 }

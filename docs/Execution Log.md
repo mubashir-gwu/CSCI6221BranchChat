@@ -232,3 +232,27 @@
 - `npm run build` passes with no errors
 - `npm run dev` starts cleanly on localhost:3000
 - `npm test` — 21 tests pass (2 test files)
+
+## F-04 Audit Cycle 1 — Fixes
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### Fixes Applied (4/4)
+
+1. **Wrapped all API route handlers in try-catch with CastError handling** — `conversations/route.ts`, `[id]/route.ts`, `[id]/nodes/route.ts`, `[id]/nodes/[nodeId]/route.ts`. Invalid ObjectId now returns `400 { error: "Invalid ID format" }` instead of unhandled 500. All other unexpected errors return `500 { error: "Internal server error" }`.
+
+2. **Wrapped `request.json()` in inner try-catch for malformed body handling** — `conversations/route.ts` (POST), `[id]/route.ts` (PATCH). Missing or invalid JSON body now returns `400 { error: "Invalid request body" }`.
+
+3. **Removed `showCloseButton={false}` from ConfirmDialog** — `ConfirmDialog.tsx`. Removed unrecognized prop from `<DialogContent>`.
+
+4. **Replaced direct Toaster import with ToastProvider in root layout** — `layout.tsx`. Now imports and renders `ToastProvider` from `@/components/common/ToastProvider` as specified by T-021.
+
+### Fixes That Could Not Be Applied
+- None
+
+### New Concerns Noticed
+- None
+
+### Verification
+- `npm run build` passes with no errors

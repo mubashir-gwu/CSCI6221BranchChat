@@ -1,0 +1,14 @@
+1. **Orphaned user node on LLM failure + retry** (Medium)
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`, `handleSend` function
+   - Issue: When the LLM call fails, the server has already persisted a user node (api/llm/chat/route.ts:123-130). The client removes the optimistic node and resets state, but the server-side user node remains. On retry, a second user node is created with the same parent, creating an orphaned branch.
+   - Fix: The LLM chat API route should return the user node ID in its error responses (e.g., `{ error: "...", userNodeId: "..." }`). On failure, the client should either: (a) store the returned userNodeId and on retry, send a request that reuses that node instead of creating a new one, OR (b) the server should delete the user node when the LLM call fails (changing the current "keep for retry" behavior to "clean up on failure"). Option (b) is simpler and aligns with the client's current behavior of removing the optimistic node.
+
+2. **422 toast missing clickable settings link** (Low)
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`, line 161
+   - Issue: T-059 spec says 422 toast should include "with link to settings." The current toast shows "No API key found for {provider}. Add one in Settings." but "Settings" is plain text, not a clickable link.
+   - Fix: Use sonner's `description` or `action` option to add a clickable link/button. For example: `toast.error(errorMsg, { action: { label: "Go to Settings", onClick: () => router.push("/settings") } })`. This requires adding `useRouter` to the component (already imported from `next/navigation`).
+
+3. **Stale closure in UIProvider.refreshProviders** (Low)
+   - File: `src/components/providers/UIProvider.tsx`, lines 49-71
+   - Issue: `refreshProviders` captures `state.selectedProvider` via its `useCallback` dependency. Since it only runs on mount, this is currently harmless, but the pattern is fragile.
+   - Fix: Use a ref to track `selectedProvider` so the callback doesn't need it as a dependency, or use the reducer's functional form to access current state. Alternatively, leave as-is since it only runs on mount — this is a low-priority code quality improvement.

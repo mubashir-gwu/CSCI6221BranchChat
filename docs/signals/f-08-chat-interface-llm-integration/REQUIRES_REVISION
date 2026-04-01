@@ -1,4 +1,4 @@
-Audit cycle 1 found 2 medium issues that need fixing before proceeding:
+Audit cycle 1 found 2 medium and 4 low issues that need fixing:
 
 1. **ChatInput selection state not synced with prop changes**
    - File: `src/components/chat/ChatInput.tsx`
@@ -9,3 +9,23 @@ Audit cycle 1 found 2 medium issues that need fixing before proceeding:
    - File: `src/lib/providers/gemini.ts`
    - Issue: Line 15 maps both `system` and `user` roles to `'user'`. System messages should be extracted and passed via `config.systemInstruction` in `ai.chats.create()`.
    - Fix: Before building `history`, separate out messages with `role === 'system'`, join their content, and pass as `config: { systemInstruction: joinedSystemContent }` to `ai.chats.create()`. Map only non-system messages into `history`.
+
+3. **No loading indicator during initial node fetch**
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`
+   - Issue: The `loadNodes()` effect (lines 37-79) does not set `isLoading` while fetching historical nodes. The user sees the empty state ("Send a message to start") while nodes load, which is misleading for conversations with existing messages.
+   - Fix: Call `uiDispatch({ type: "SET_LOADING", payload: true })` at the start of `loadNodes()` and `uiDispatch({ type: "SET_LOADING", payload: false })` in a `finally` block after nodes are loaded.
+
+4. **First-child leaf selection ignores previously active branch**
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`, lines 65-70
+   - Issue: On page load, the code always walks the first child to find the deepest leaf. If the user was previously on a non-first branch, re-opening the conversation lands on the wrong branch.
+   - Fix: After fetching nodes, check for a `#nodeId` URL hash. If present and the node exists in the nodesMap, use that as the `activeNodeId` instead of walking to the first-child leaf. When setting the active node (e.g., after sending a message), update the URL hash via `window.location.hash = nodeId` so it persists across page reloads.
+
+5. **Auth check after input validation leaks valid provider/model names**
+   - File: `src/app/api/llm/chat/route.ts`, lines 40-69
+   - Issue: Input validation (provider/model existence) runs before the auth check. An unauthenticated request gets a 400 for invalid provider but 401 for valid provider, allowing enumeration.
+   - Fix: Move the auth check (lines 66-69) to immediately after JSON parsing (after line 37), before any input validation.
+
+6. **parentNodeId not validated against conversation gives unhelpful 500 error**
+   - File: `src/app/api/llm/chat/route.ts`
+   - Issue: If `parentNodeId` is provided but does not exist in the conversation's nodes, `buildContext` → `getPathToRoot` throws "Node not found", caught by the outer catch as a generic 500. No data corruption occurs, but the error message is unhelpful.
+   - Fix: After building `nodesMap` (line 97-110), if `parentNodeId` is not null, check `nodesMap.has(parentNodeId)`. If false, return 400 with `{ error: "Parent node not found in this conversation" }`.

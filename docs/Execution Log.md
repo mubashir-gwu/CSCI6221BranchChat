@@ -357,3 +357,88 @@
 - `npm run build` passes with no errors
 - `npm run dev` starts on localhost:3000
 - All tests pass
+
+---
+
+## F-08: Chat Interface & LLM Integration
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-036: Implement LLM Chat API Route
+- Deliberation conducted and saved to `docs/decisions/chat-llm-integration/T-036-*`
+- Implemented full 12-step orchestration in `src/app/api/llm/chat/route.ts` per Architecture Document §5.4
+- Validates provider against PROVIDERS, model against MODELS, mock only in development
+- Auth check, conversation ownership verification, API key decryption (skip for mock)
+- Builds context via `buildContext()` with token truncation at 80% of model limit
+- Inserts user node, calls LLM, inserts assistant node, returns both with 201
+- Sets `rootNodeId` on first message (parentNodeId === null)
+- Error classification: 422 (no key), 429 (rate limit), 502 (invalid key / API error)
+- User node preserved on LLM failure for retry (FR-035)
+- `maxDuration = 60` exported
+- CastError and malformed JSON handling match existing route patterns
+- Build passes
+
+### T-037: Implement ModelSelector Component
+- Implemented `src/components/chat/ModelSelector.tsx` using shadcn DropdownMenu
+- Groups models by provider with color-coded dots
+- Only shows providers with API keys configured (via `availableProviders` prop)
+- Mock provider shown only in development
+- Selected value displays provider + model name with color indicator
+- Build passes
+
+### T-038: Implement ChatMessage Component
+- Installed `react-markdown@10.1.0`, `react-syntax-highlighter@16.1.1`, `@types/react-syntax-highlighter@15.5.13`
+- Implemented `src/components/chat/ChatMessage.tsx` with react-markdown + Prism syntax highlighting
+- User messages styled with primary background, assistant messages with muted background + provider color left border
+- Provider/model badge on assistant messages
+- BranchIndicator shown when `childCount > 1`
+- Also implemented `BranchIndicator.tsx` (badge with branch icon and count) and `BranchMenu.tsx` (sibling list with preview + provider color)
+- Build passes
+
+### T-039: Implement ChatInput and LoadingIndicator Components
+- Implemented `src/components/chat/ChatInput.tsx` with textarea, send button, ModelSelector
+- Enter sends, Shift+Enter for newline, clears on send, disabled when loading
+- Pre-selects parent node's provider/model via props
+- Implemented `src/components/chat/LoadingIndicator.tsx` with animated bouncing dots
+- Build passes
+
+### T-040: Implement ChatPanel Component
+- Implemented `src/components/chat/ChatPanel.tsx` using shadcn ScrollArea
+- Maps `activePath` to ChatMessage components with childCount from childrenMap
+- Auto-scrolls to bottom on new messages or loading state change
+- Shows LoadingIndicator when `isLoading` is true
+- Empty state message when no messages
+- Implemented `src/hooks/useActivePath.ts` — memoized hook using `getPathToRoot`
+- Build passes
+
+### T-041: Implement Chat Page (Wire Everything Together)
+- Implemented `src/app/(protected)/chat/[conversationId]/page.tsx`
+- On mount: fetches nodes, builds nodesMap, walks to deepest leaf for activeNodeId
+- Fetches available providers via `GET /api/settings/api-keys`
+- Message send flow: POST to `/api/llm/chat`, adds nodes to state, sets active to assistant node
+- Error handling with toast notifications
+- Pre-fills ModelSelector from active node's provider/model or conversation defaults
+- Fixed TypeScript circular inference issue with explicit `string[]` type annotation
+- Build passes
+
+### T-042: Markdown Rendering Fix for Turbopack
+- Tested `npm run dev` (Turbopack) — react-markdown v10 and react-syntax-highlighter work correctly
+- No `--webpack` fallback needed, no `transpilePackages` config required
+- Turbopack correctly bundles ESM-only react-markdown and Prism syntax highlighter
+- No code changes required
+
+### T-043: Write Tests for LLM Chat Route
+- Created `__tests__/api/llm-chat.test.ts` with 16 tests
+- Tests cover: auth (401), validation (400), missing key (422), ownership (403/404), successful send (201), first message rootNodeId, context building, mock provider without key, rate limit (429), invalid key (502), generic error (502), user node preservation on failure
+- All tests mock LLM providers — no real API calls
+- All 82 tests pass (16 new + 66 existing)
+
+### Workarounds & Known Issues
+- **TypeScript circular inference**: `const children = childrenMap.get(currentId) ?? []` inside a while loop caused "implicitly has type 'any'" error. Fixed by adding explicit `string[]` type annotation.
+- **Tailwind 4 class naming**: `break-words` → `wrap-break-word` per Tailwind 4 canonical class names.
+
+### Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts on localhost:3000 (Turbopack, syntax highlighting works)
+- All 82 tests pass (8 test files)

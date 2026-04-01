@@ -237,9 +237,8 @@ export default function ChatPage() {
 
         // Navigate to parent or clear if root was deleted
         if (data.newActiveNodeId) {
-          const leafId = findDeepestLeaf(data.newActiveNodeId, childrenMap);
-          dispatch({ type: "SET_ACTIVE_NODE", payload: leafId });
-          window.location.hash = leafId;
+          dispatch({ type: "SET_ACTIVE_NODE", payload: data.newActiveNodeId });
+          window.location.hash = data.newActiveNodeId;
         } else {
           dispatch({ type: "SET_ACTIVE_NODE", payload: null });
           window.location.hash = "";

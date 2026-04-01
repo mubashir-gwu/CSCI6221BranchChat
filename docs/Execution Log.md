@@ -525,3 +525,17 @@ Updated the Gemini model entry in:
 - Created `__tests__/components/BranchIndicator.test.tsx` (4 tests): badge rendering, click callback, correct count
 - Created `__tests__/components/ChatPanel.test.tsx` (5 tests): empty state, message rendering, branch indicator visibility, loading state
 - All 91 tests pass across the full suite
+
+## F-09 Audit Cycle 2: Fix Revision Findings
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### Fixes Applied (2/2)
+
+1. **Stale childrenMap after deletion** — Removed `findDeepestLeaf` call in `handleDeleteNode` (`page.tsx`). Now sets `activeNodeId` directly to `data.newActiveNodeId` returned by the API, avoiding stale `childrenMap` from pre-deletion render.
+
+2. **Root node deletion does not clear conversation.rootNodeId** — Added check in `DELETE /api/conversations/[id]/nodes/[nodeId]` route: if the deleted node has `parentId === null`, updates `conversation.rootNodeId` to `null`.
+
+### Build Verification
+- `npm run build` passes after both fixes

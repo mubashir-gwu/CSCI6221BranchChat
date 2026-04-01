@@ -61,6 +61,10 @@ export async function DELETE(
 
     const result = await Node.deleteMany({ _id: { $in: toDelete } });
 
+    if (targetNode.parentId === null) {
+      await Conversation.findByIdAndUpdate(id, { rootNodeId: null });
+    }
+
     const newActiveNodeId = targetNode.parentId?.toString() ?? null;
 
     return NextResponse.json({

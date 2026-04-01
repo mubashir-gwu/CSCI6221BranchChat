@@ -1,3 +1,12 @@
-export default function Home() {
-  return <div>BranchChat</div>;
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth();
+
+  if (session) {
+    redirect("/dashboard");
+  } else {
+    redirect("/login");
+  }
 }

@@ -592,3 +592,40 @@ Updated the Gemini model entry in:
 - Fix 1: `useTreeLayout.ts` — added missing `nodes.has()` guard to rfEdges loop (lines 64-72), matching the guard already present in the Dagre edge loop
 - `npm run build` passes after fix
 - No new concerns noticed
+
+---
+
+## F-11: Export & Import
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-054: Implement Export API Route
+- Implemented `GET /api/conversations/:id/export` with auth + ownership check
+- Returns `ExportedTree` JSON with `Content-Disposition: attachment` header
+- Computes `childrenIds` server-side from parentId relationships
+- Includes `version: 1`, `exportedAt`, `title`, and all node metadata
+
+### T-055: Implement Import Validation
+- Added `validateTreeIntegrity()` to `src/lib/tree.ts`
+- Validates: exactly one root, all parentIds reference existing nodes, all nodes reachable via BFS
+- Throws descriptive errors for each violation type
+
+### T-056: Implement Import API Route
+- Implemented `POST /api/import` with auth check and full validation
+- Validates version, tree integrity, and node array presence
+- Generates new ObjectIds for all nodes with old→new ID remapping
+- Creates new Conversation and inserts all remapped nodes via `insertMany`
+- Returns 201 with `{ conversationId, title, nodeCount }`
+
+### T-057: Wire Export/Import Buttons in UI
+- Added Export button to chat page header bar (triggers file download)
+- Added Import button to ConversationList sidebar (opens file picker)
+- Import: reads file client-side, parses JSON, sends to API, navigates to new conversation on success
+- Error toasts for invalid JSON and API failures
+
+### T-058: Write Tests for Export and Import
+- Created `__tests__/api/import-export.test.ts` with 20 tests covering export, import, and round-trip
+- Added 6 `validateTreeIntegrity` tests to `__tests__/lib/tree.test.ts`
+- All 121 tests pass across 13 test files
+- `npm run build` passes with no errors

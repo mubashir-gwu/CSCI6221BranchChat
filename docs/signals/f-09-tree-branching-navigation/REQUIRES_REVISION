@@ -1,0 +1,9 @@
+1. **Stale childrenMap after deletion causes navigation to deleted nodes** (Medium)
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`, `handleDeleteNode` function (lines 219-251)
+   - Issue: After dispatching `REMOVE_NODES`, `findDeepestLeaf(data.newActiveNodeId, childrenMap)` uses the pre-deletion `childrenMap` (a useMemo that hasn't re-rendered yet). If the deleted node was the first child of its parent, `findDeepestLeaf` walks into the deleted subtree, setting `activeNodeId` to a nonexistent node.
+   - Fix: Replace lines 240-241 with `dispatch({ type: "SET_ACTIVE_NODE", payload: data.newActiveNodeId })` and `window.location.hash = data.newActiveNodeId`. This matches the T-047 spec ("Set activeNodeId to the returned newActiveNodeId") and avoids the stale-state issue entirely. Remove the `findDeepestLeaf` call in the deletion path.
+
+2. **Root node deletion does not clear conversation.rootNodeId** (Low)
+   - File: `src/app/api/conversations/[id]/nodes/[nodeId]/route.ts`
+   - Issue: When deleting a node with `parentId === null` (the root), the conversation's `rootNodeId` field is not updated to `null`, leaving a dangling reference.
+   - Fix: After line 62 (`const result = await Node.deleteMany(...)`), add: `if (targetNode.parentId === null) { await Conversation.findByIdAndUpdate(id, { rootNodeId: null }); }`

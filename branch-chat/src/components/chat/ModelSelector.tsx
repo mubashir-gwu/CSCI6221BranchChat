@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
 import { ChevronDownIcon } from "lucide-react";
+import { toast } from "sonner";
 
 interface ModelSelectorProps {
   value: { provider: string; model: string };
@@ -25,13 +26,16 @@ export default function ModelSelector({
   onChange,
   availableProviders,
 }: ModelSelectorProps) {
-  // Determine which providers to show
+  // Show all providers; mock only in dev
   const visibleProviders = Object.keys(PROVIDERS).filter((key) => {
     if (key === "mock") {
       return process.env.NODE_ENV === "development";
     }
-    return availableProviders.includes(key);
+    return true;
   });
+
+  const isProviderEnabled = (key: string) =>
+    key === "mock" || availableProviders.includes(key);
 
   // Find display info for current selection
   const currentProvider = PROVIDERS[value.provider as keyof typeof PROVIDERS];
@@ -59,6 +63,7 @@ export default function ModelSelector({
         {visibleProviders.map((providerKey, idx) => {
           const provider = PROVIDERS[providerKey as keyof typeof PROVIDERS];
           const models = MODELS[providerKey as keyof typeof MODELS];
+          const enabled = isProviderEnabled(providerKey);
 
           return (
             <DropdownMenuGroup key={providerKey}>
@@ -67,21 +72,39 @@ export default function ModelSelector({
                 <span className="flex items-center gap-1.5">
                   <span
                     className="inline-block h-2 w-2 rounded-full"
-                    style={{ backgroundColor: provider.color }}
+                    style={{
+                      backgroundColor: enabled ? provider.color : "#9CA3AF",
+                    }}
                   />
-                  {provider.displayName}
+                  <span className={enabled ? "" : "text-muted-foreground"}>
+                    {provider.displayName}
+                    {!enabled && (
+                      <span className="ml-1 text-xs opacity-60">(no key)</span>
+                    )}
+                  </span>
                 </span>
               </DropdownMenuLabel>
               {models.map((m) => (
                 <DropdownMenuItem
                   key={m.id}
-                  onClick={() => onChange({ provider: providerKey, model: m.id })}
+                  disabled={!enabled}
+                  onClick={() => {
+                    if (!enabled) {
+                      toast.info(
+                        `Add an API key for ${provider.displayName} in Settings to use this model.`
+                      );
+                      return;
+                    }
+                    onChange({ provider: providerKey, model: m.id });
+                  }}
                 >
                   <span
                     className={
                       value.provider === providerKey && value.model === m.id
                         ? "font-semibold"
-                        : ""
+                        : enabled
+                          ? ""
+                          : "text-muted-foreground"
                     }
                   >
                     {m.name}

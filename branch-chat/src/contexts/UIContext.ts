@@ -8,13 +8,15 @@ export interface UIState {
   isTreeOpen: boolean;
   selectedProvider: string;
   selectedModel: string;
+  availableProviders: string[];
 }
 
 export type UIAction =
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "TOGGLE_SIDEBAR" }
   | { type: "TOGGLE_TREE" }
-  | { type: "SET_SELECTED_MODEL"; payload: { provider: string; model: string } };
+  | { type: "SET_SELECTED_MODEL"; payload: { provider: string; model: string } }
+  | { type: "SET_AVAILABLE_PROVIDERS"; payload: string[] };
 
 export interface UIContextValue {
   state: UIState;

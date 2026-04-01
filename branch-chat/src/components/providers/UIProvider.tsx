@@ -1,7 +1,8 @@
 "use client";
 
-import { useReducer, useMemo } from "react";
+import { useReducer, useMemo, useEffect, useCallback } from "react";
 import { UIContext, UIState, UIAction } from "@/contexts/UIContext";
+import { MODELS } from "@/constants/models";
 
 const initialState: UIState = {
   isLoading: false,
@@ -9,6 +10,7 @@ const initialState: UIState = {
   isTreeOpen: false,
   selectedProvider: "openai",
   selectedModel: "gpt-4o",
+  availableProviders: [],
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -29,6 +31,9 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         selectedModel: action.payload.model,
       };
 
+    case "SET_AVAILABLE_PROVIDERS":
+      return { ...state, availableProviders: action.payload };
+
     default:
       return state;
   }
@@ -40,6 +45,34 @@ export default function UIProvider({
   children: React.ReactNode;
 }) {
   const [state, dispatch] = useReducer(uiReducer, initialState);
+
+  const refreshProviders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings/api-keys");
+      if (!res.ok) return;
+      const data = await res.json();
+      const providers = data.keys.map((k: { provider: string }) => k.provider);
+      dispatch({ type: "SET_AVAILABLE_PROVIDERS", payload: providers });
+
+      // If current selected provider has no key, switch to first available
+      if (providers.length > 0 && !providers.includes(state.selectedProvider)) {
+        const firstProvider = providers[0] as keyof typeof MODELS;
+        const firstModel = MODELS[firstProvider]?.[0];
+        if (firstModel) {
+          dispatch({
+            type: "SET_SELECTED_MODEL",
+            payload: { provider: firstProvider, model: firstModel.id },
+          });
+        }
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [state.selectedProvider]);
+
+  useEffect(() => {
+    refreshProviders();
+  }, [refreshProviders]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 

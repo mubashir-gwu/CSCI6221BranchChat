@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import TreeSidebar from "@/components/tree/TreeSidebar";
-import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
 
@@ -33,8 +32,6 @@ export default function ChatPage() {
 
   const { state, dispatch } = useConversation();
   const { state: uiState, dispatch: uiDispatch } = useUI();
-
-  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   // Load nodes on mount
   useEffect(() => {
@@ -91,33 +88,7 @@ export default function ChatPage() {
     loadNodes();
   }, [conversationId, dispatch, uiDispatch]);
 
-  // Fetch available providers (API keys)
-  useEffect(() => {
-    async function fetchKeys() {
-      try {
-        const res = await fetch("/api/settings/api-keys");
-        if (!res.ok) return;
-        const data = await res.json();
-        const providers = data.keys.map((k: { provider: string }) => k.provider);
-        setAvailableProviders(providers);
-
-        // If current selected provider has no key, switch to first available
-        if (providers.length > 0 && !providers.includes(uiState.selectedProvider)) {
-          const firstProvider = providers[0] as keyof typeof MODELS;
-          const firstModel = MODELS[firstProvider]?.[0];
-          if (firstModel) {
-            uiDispatch({
-              type: "SET_SELECTED_MODEL",
-              payload: { provider: firstProvider, model: firstModel.id },
-            });
-          }
-        }
-      } catch {
-        // Silently fail
-      }
-    }
-    fetchKeys();
-  }, [uiState.selectedProvider, uiDispatch]);
+  const availableProviders = uiState.availableProviders;
 
   const childrenMap = useMemo(
     () => buildChildrenMap(state.nodes),

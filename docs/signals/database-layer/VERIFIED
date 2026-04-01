@@ -1,0 +1,6 @@
+Audit passed. All cycle 1 findings resolved.
+
+- BUG-01 (connection retry): Fixed — `connectDB()` now resets `cached.promise` on failure.
+- BUG-02 (INode standalone interface): Acceptable deviation — avoids Mongoose `Document.model()` naming conflict. No action required.
+
+All 5 tasks (T-006 through T-010) pass all acceptance criteria. Build succeeds. No security, architecture, or forward compatibility issues.

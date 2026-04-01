@@ -1,3 +1,56 @@
-export default function BranchMenu() {
-  return <div>BranchMenu</div>;
+"use client";
+
+import { PROVIDERS } from "@/constants/providers";
+import type { TreeNode } from "@/types/tree";
+
+interface BranchMenuProps {
+  parentNodeId: string;
+  children: TreeNode[];
+  activeChildId: string | null;
+  onSelect: (nodeId: string) => void;
+}
+
+export default function BranchMenu({
+  parentNodeId,
+  children,
+  activeChildId,
+  onSelect,
+}: BranchMenuProps) {
+  return (
+    <div className="rounded-lg border bg-popover p-2 shadow-md">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
+        Branches ({children.length})
+      </p>
+      <div className="flex flex-col gap-1">
+        {children.map((child) => {
+          const provider = child.provider
+            ? PROVIDERS[child.provider as keyof typeof PROVIDERS]
+            : null;
+          const isActive = child.id === activeChildId;
+          const preview =
+            child.content.length > 60
+              ? child.content.slice(0, 60) + "..."
+              : child.content;
+
+          return (
+            <button
+              key={child.id}
+              onClick={() => onSelect(child.id)}
+              className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+                isActive ? "bg-accent font-medium" : ""
+              }`}
+            >
+              {provider && (
+                <span
+                  className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: provider.color }}
+                />
+              )}
+              <span className="line-clamp-2">{preview}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

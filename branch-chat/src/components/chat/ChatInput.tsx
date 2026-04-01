@@ -50,6 +50,7 @@ export default function ChatInput({
         <textarea
           className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Type a message..."
+          aria-label="Message input"
           rows={2}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -60,6 +61,7 @@ export default function ChatInput({
           size="icon"
           onClick={handleSend}
           disabled={disabled || !message.trim()}
+          aria-label="Send message"
         >
           <SendIcon className="h-4 w-4" />
         </Button>

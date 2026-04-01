@@ -56,6 +56,7 @@ export default function TreeVisualization({
       minZoom={0.1}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
+      aria-label="Conversation tree visualization"
     >
       <Controls showInteractive={false} />
       <MiniMap

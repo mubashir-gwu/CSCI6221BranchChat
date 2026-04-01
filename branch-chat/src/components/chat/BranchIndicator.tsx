@@ -15,7 +15,11 @@ export default function BranchIndicator({
   onClick,
 }: BranchIndicatorProps) {
   return (
-    <button onClick={onClick} className="cursor-pointer">
+    <button
+      onClick={onClick}
+      className="cursor-pointer"
+      aria-label={`Show ${branchCount} branches from this message`}
+    >
       <Badge variant="secondary" className="gap-1 text-xs">
         <GitBranchIcon className="h-3 w-3" />
         {branchCount} branches

@@ -77,6 +77,8 @@ export default function ConversationItem({
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-accent ${
           isActive ? "bg-accent" : ""
         }`}
@@ -85,6 +87,14 @@ export default function ConversationItem({
             router.push(`/chat/${conversation.id}`);
           }
         }}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isEditing) {
+            e.preventDefault();
+            router.push(`/chat/${conversation.id}`);
+          }
+        }}
+        aria-label={`Open conversation: ${conversation.title}`}
+        aria-current={isActive ? "page" : undefined}
       >
         {isEditing ? (
           <Input
@@ -112,6 +122,7 @@ export default function ConversationItem({
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0"
+              aria-label={`Rename "${conversation.title}"`}
               onClick={(e) => {
                 e.stopPropagation();
                 setEditTitle(conversation.title);
@@ -124,6 +135,7 @@ export default function ConversationItem({
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0 text-destructive"
+              aria-label={`Delete "${conversation.title}"`}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowDeleteDialog(true);

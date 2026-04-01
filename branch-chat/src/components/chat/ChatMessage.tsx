@@ -150,7 +150,7 @@ export default function ChatMessage({
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="absolute -top-2 -right-2 hidden rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm transition-opacity group-hover:block"
-            title="Delete message and replies"
+            aria-label="Delete message and replies"
           >
             <Trash2Icon className="h-3 w-3" />
           </button>

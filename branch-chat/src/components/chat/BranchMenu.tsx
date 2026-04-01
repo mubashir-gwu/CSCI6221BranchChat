@@ -17,7 +17,7 @@ export default function BranchMenu({
   onSelect,
 }: BranchMenuProps) {
   return (
-    <div className="rounded-lg border bg-popover p-2 shadow-md">
+    <div className="rounded-lg border bg-popover p-2 shadow-md" role="menu" aria-label="Branch options">
       <p className="mb-2 text-xs font-medium text-muted-foreground">
         Branches ({children.length})
       </p>
@@ -35,7 +35,9 @@ export default function BranchMenu({
           return (
             <button
               key={child.id}
+              role="menuitem"
               onClick={() => onSelect(child.id)}
+              aria-current={isActive ? "true" : undefined}
               className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 isActive ? "bg-accent font-medium" : ""
               }`}

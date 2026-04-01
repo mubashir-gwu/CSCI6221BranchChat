@@ -1,0 +1,9 @@
+1. **Fix middleware matcher pattern** — File: `branch-chat/middleware.ts`, line 4. Replace `'/(protected)/:path*'` with explicit URL path patterns that match actual request URLs: `'/dashboard'`, `'/chat/:path*'`, `'/settings'`. Route groups like `(protected)` are file-system only and don't appear in URLs, so the current pattern never matches.
+
+2. **Add auth redirect to login page** — File: `branch-chat/src/app/(auth)/login/page.tsx`. Add a server-side `auth()` check at the top of the component. If a session exists, `redirect("/dashboard")`. This matches Architecture Document §6 which states the login page "Redirects if authenticated".
+
+3. **Add auth redirect to register page** — File: `branch-chat/src/app/(auth)/register/page.tsx`. Same as fix #2 — add server-side `auth()` check and redirect to `/dashboard` if already authenticated.
+
+4. **Fix register 409 error message** — File: `branch-chat/src/app/api/auth/register/route.ts`, line 32. Change `"Email already exists"` to `"An account with this email already exists"` to match Architecture Document §5.1.
+
+5. **Remove unnecessary exports from auth.ts** — File: `branch-chat/src/lib/auth.ts`, line 40. Remove `export const { GET, POST } = handlers;`. These are only needed in the route handler file (`[...nextauth]/route.ts`), which already imports and exports them correctly.

@@ -38,3 +38,14 @@
 - `.gitignore` covers `.env*`, `node_modules`, `.next`
 - `npm test` exits 0 (no test files yet)
 - Build passes
+
+### Revision Pass (2026-03-31)
+
+**Fixes applied: 2/2**
+
+1. **vitest.config.ts path resolution** — Replaced invalid `resolve: { tsconfigPaths: true }` block with `vite-tsconfig-paths` plugin in the plugins array. Config now correctly uses the installed package.
+2. **Pin devDependency versions to CLAUDE.md spec** — Updated `@tailwindcss/postcss` from `^4` to `4.2.2`, `tailwindcss` from `^4` to `4.2.2`, `@vitejs/plugin-react` from `^6.0.1` to `^4`, `jsdom` from `^29.0.1` to `^25`, `vite-tsconfig-paths` from `^6.1.1` to `^5`. `npm install`, `npm run build`, and `npm test` all pass.
+
+**Fixes that couldn't be applied:** None
+
+**New concerns noticed:** None

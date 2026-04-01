@@ -46,11 +46,18 @@ Implement it directly following the task description and architecture doc.
 ### Step 3: Self-Check
 After implementing each task, verify every acceptance criterion listed for that task. Fix any that don't pass before moving to the next task.
 
+### Step 3.5: Commit
+After each task passes its acceptance criteria, commit using the commit message specified in the task breakdown:
+```
+git add -A && git commit -m "<commit message from task>"
+```
+Do NOT batch tasks into a single commit. Every task gets its own commit.
+
 ### Step 4: After All Tasks Complete
 When all tasks for the feature are done:
 1. Run `npm run build` — it must pass with no errors
 2. Run `npm run dev` — it must start without errors
-3. Write a brief summary of what was implemented to `docs/04-execution-log.md`
+3. Write a brief summary of what was implemented to `docs/Execution Log.md`
 
 ## Anti-Spiral Rules — MANDATORY
 
@@ -60,7 +67,7 @@ These rules override all other instructions.
 If you try to fix the same issue twice and it still fails:
 1. STOP immediately
 2. Do NOT try a third time
-3. Write to `docs/04-execution-log.md`:
+3. Write to `docs/Execution Log.md`:
    - What you were trying to do
    - What failed both times
    - What you think the root cause is
@@ -76,7 +83,7 @@ If you have edited the same file 10+ times consecutively without the acceptance 
 ### The Scope Rule
 Do NOT modify files that belong to other features. If implementing this task seems to require changing another feature's code:
 1. STOP
-2. Note the dependency in `docs/04-execution-log.md`
+2. Note the dependency in `docs/Execution Log.md`
 3. Implement what you can within scope
 
 ### What "STOP" Means

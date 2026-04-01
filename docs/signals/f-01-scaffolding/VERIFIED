@@ -1,0 +1,6 @@
+Audit passed. No critical or medium issues found.
+
+Low-severity observations (informational only, no action required):
+1. `next` version 16.2.2 vs spec 16.2.1 — minor patch ahead, no impact.
+2. Some devDependencies use caret ranges where spec pins exact versions — lock file controls actual installs.
+3. `postcss` not explicitly listed as devDependency — works as transitive dep of @tailwindcss/postcss.

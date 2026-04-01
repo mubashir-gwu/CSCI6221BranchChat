@@ -24,7 +24,16 @@ export default function ProtectedLayout({
             <div className="flex-1 overflow-hidden">
               <ConversationList />
             </div>
-            <div className="border-t p-2">
+            <div className="border-t p-2 space-y-1">
+              <Link href="/settings">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                >
+                  Settings
+                </Button>
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"

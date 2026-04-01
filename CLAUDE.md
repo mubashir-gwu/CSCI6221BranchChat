@@ -13,6 +13,10 @@ These are the authoritative source documents. If anything in this file seems amb
 - **Architecture Deliberation Transcript:** `docs/decisions/Architecture Debate.md`
 - **Runtime log with workarounds and known issues from previous features:** `docs/Execution Log.md`
 
+## Project Root
+
+The Next.js application source code is inside the `branch-chat/` subdirectory, NOT the repository root. All file paths in this document (e.g., `src/app/`, `src/lib/`, `middleware.ts`) are relative to `branch-chat/`. Always `cd branch-chat` before running any commands (`npm install`, `npm run dev`, `npm run build`, etc.) or reading/writing source files.
+
 ## Tech Stack (exact versions)
 
 ```jsonc

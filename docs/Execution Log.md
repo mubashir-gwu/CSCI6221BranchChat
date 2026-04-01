@@ -256,3 +256,40 @@
 
 ### Verification
 - `npm run build` passes with no errors
+
+---
+
+## F-05: API Key Management
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### T-024: Implement AES-256-GCM Encryption Utilities
+- Implemented `src/lib/encryption.ts` with `encrypt`, `decrypt`, and `maskKey` functions
+- Used lazy key buffer initialization to avoid build-time errors when `ENCRYPTION_KEY` env var is absent
+- `encrypt` uses 12-byte random IV, AES-256-GCM, returns hex-encoded `{ encryptedKey, iv, authTag }`
+- `maskKey` shows first 3 + "..." + last 3 chars; returns "***" for keys ≤6 chars
+
+### T-025: Implement API Key API Routes
+- `GET /api/settings/api-keys` — returns masked keys with provider and updatedAt, scoped by userId
+- `PUT /api/settings/api-keys/[provider]` — validates provider against allowlist, encrypts key, upserts into ApiKey collection
+- `DELETE /api/settings/api-keys/[provider]` — deletes key scoped by userId and provider
+- All routes check auth, validate provider, scope queries by userId
+
+### T-026: Implement Settings Page UI
+- `ApiKeyForm` — per-provider card with password input, Save/Delete buttons, masked key display, toast feedback
+- `ApiKeyList` — fetches keys on mount, renders form per provider (openai, anthropic, gemini; mock excluded)
+- `settings/page.tsx` — renders ApiKeyList with "API Key Settings" heading
+
+### T-027: Write Tests for Encryption and API Key Routes
+- `__tests__/lib/encryption.test.ts` — round-trip, tamper detection (authTag + ciphertext), maskKey variants (10 tests)
+- `__tests__/api/api-keys.test.ts` — GET/PUT/DELETE with auth, validation, and success cases (8 tests)
+- All 18 F-05 tests pass; full suite 39/39
+
+### Known Issues / Workarounds
+- Encryption key buffer is lazily initialized via `getKeyBuffer()` function instead of module-level constant, because `process.env.ENCRYPTION_KEY` is not available at Next.js build time (static analysis phase). This is intentional — the env var is only needed at runtime.
+
+### Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts without errors
+- All 39 tests pass

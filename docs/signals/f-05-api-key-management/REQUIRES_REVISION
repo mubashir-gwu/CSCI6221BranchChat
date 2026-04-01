@@ -1,0 +1,11 @@
+Audit cycle 1 found 2 issues requiring fixes before proceeding.
+
+1. **Per-key error handling in GET route**
+   - File: `src/app/api/settings/api-keys/route.ts`
+   - Issue: The `.map()` on line 18-22 calls `decrypt()` for every key. If any single key has corrupted encryption data, `decrypt()` throws and the entire GET request returns 500 — the user cannot view or manage any of their keys.
+   - Fix: Wrap the per-key decrypt+mask in a try/catch inside the `.map()`. On failure, return `{ provider: k.provider, maskedKey: "[error]", updatedAt: k.updatedAt.toISOString() }` so the user can still see and delete the corrupted entry. Log the error server-side with `console.error`.
+
+2. **Deduplicate ALLOWED_PROVIDERS from ApiKey model enum**
+   - File: `src/app/api/settings/api-keys/[provider]/route.ts`
+   - Issue: `ALLOWED_PROVIDERS = ["openai", "anthropic", "gemini"]` on line 7 is a hardcoded duplicate of the `enum` in the ApiKey Mongoose schema (`src/models/ApiKey.ts:16`). If a provider is added to one but not the other, requests will silently fail or bypass validation.
+   - Fix: Export the provider enum values from `src/models/ApiKey.ts` as a constant (e.g. `export const API_KEY_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;` and use that array in both the schema enum and the route's validation check). Remove the hardcoded `ALLOWED_PROVIDERS` from the route file.

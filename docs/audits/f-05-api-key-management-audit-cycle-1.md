@@ -46,11 +46,9 @@ Tasks covered: T-024, T-025, T-026, T-027
 
 ## Bug Detection
 
-No critical or medium bugs found. Minor observations:
+1. **GET decryption failure is not fault-tolerant** — `api-keys/route.ts:18-22`: The `.map()` calls `decrypt()` for every key without a try/catch. If any stored key has corrupted encryption data, `decrypt()` throws and the entire GET request returns 500. The user is completely locked out of key management — they cannot view, update, or delete any keys. **Severity: Medium.** Fix: wrap per-key decrypt+mask in try/catch, return a fallback `maskedKey: "[error]"` for corrupted entries so the user can still see and delete them.
 
-1. **GET decryption failure is not fault-tolerant** — `api-keys/route.ts:20`: If any stored key has corrupted encryption data, `decrypt()` will throw and the entire GET request returns 500. The user would be unable to view or manage any of their keys. **Severity: Low.** A per-key try/catch could gracefully skip corrupted entries, but this is an edge case that only occurs with data corruption.
-
-2. **No rate limiting on PUT** — A user could theoretically spam the PUT endpoint to repeatedly encrypt/store keys. This is acknowledged in Architecture Document §11 (tradeoff #4) as a known limitation not in scope. **Severity: Low.**
+2. **`ALLOWED_PROVIDERS` hardcoded duplication** — `[provider]/route.ts:7`: The `ALLOWED_PROVIDERS` array duplicates the `enum` defined in `src/models/ApiKey.ts:16`. If a provider is added to the model but not the route (or vice versa), requests will silently fail or bypass validation. **Severity: Medium.** Fix: export the provider list from the model and import it in the route handler.
 
 ## Security
 
@@ -108,10 +106,10 @@ No security issues found.
 
 ## Summary
 - Critical issues: 0
-- Medium issues: 0
-- Low issues: 2
-- Recommendation: **PROCEED**
+- Medium issues: 2
+- Low issues: 0
+- Recommendation: **FIX FIRST**
 
-Low issues (informational only):
-1. GET route has no per-key error handling — a corrupted key causes the entire listing to fail with 500.
-2. `ALLOWED_PROVIDERS` list in the route handler is a minor duplication of the model's enum.
+Issues requiring revision:
+1. **GET route has no per-key error handling** (`src/app/api/settings/api-keys/route.ts`) — A single corrupted key causes the entire listing to fail with 500, locking the user out of key management entirely. Wrap per-key decrypt+mask in try/catch with a graceful fallback.
+2. **`ALLOWED_PROVIDERS` hardcoded duplication** (`src/app/api/settings/api-keys/[provider]/route.ts`) — The provider allowlist duplicates the enum in the ApiKey model. Divergence risk when providers are added. Extract a shared constant from the model and import it in the route.

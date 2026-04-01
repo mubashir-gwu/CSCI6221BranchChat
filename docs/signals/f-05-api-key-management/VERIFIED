@@ -1,5 +1,0 @@
-Audit passed. No critical or medium issues found.
-
-Low-severity notes:
-1. GET /api/settings/api-keys has no per-key error handling — if a single stored key has corrupted encryption data, decrypt() throws and the entire request returns 500. A per-key try/catch would be more resilient but this is an edge case.
-2. ALLOWED_PROVIDERS in [provider]/route.ts duplicates the enum in the ApiKey model schema — minor duplication, not a defect.

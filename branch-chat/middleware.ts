@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-
-// Stub — NextAuth v5 route protection will be implemented in F-02
-export function middleware(_request: NextRequest) {
-  return NextResponse.next();
-}
+export { auth as middleware } from '@/lib/auth';
 
 export const config = {
-  matcher: ["/((?!login|register|api/auth).*)"],
+  matcher: [
+    '/(protected)/:path*',
+    '/api/conversations/:path*',
+    '/api/llm/:path*',
+    '/api/settings/:path*',
+    '/api/import/:path*',
+  ],
 };

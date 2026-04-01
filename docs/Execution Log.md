@@ -89,6 +89,16 @@
 - Note: `model` field name conflicts with Mongoose `Document.model()` method. Fixed by using a standalone `INode` interface (not extending `Document`) and untyped `model()` call. Schema field name remains `model` as specified.
 - `npm run build` passes
 
+### Revision Pass (2026-03-31)
+
+**Fixes applied: 1/1**
+
+1. **db.ts rejected promise caching** — Wrapped `cached.conn = await cached.promise` in a try/catch. On failure, `cached.promise` is set to `null` and the error re-thrown, allowing subsequent `connectDB()` calls to retry instead of permanently returning a rejected promise.
+
+**Fixes that couldn't be applied:** None
+
+**New concerns noticed:** None
+
 ### Final Verification
 - `npm run build` passes with no errors
 - `npm run dev` starts cleanly on localhost:3000

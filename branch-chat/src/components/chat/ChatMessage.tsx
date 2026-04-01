@@ -1,6 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { PROVIDERS } from "@/constants/providers";
@@ -30,7 +31,7 @@ export default function ChatMessage({
       className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
       <div
-        className={`relative max-w-[80%] rounded-lg px-4 py-3 ${
+        className={`relative max-w-[80%] overflow-hidden rounded-lg px-4 py-3 ${
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted border-l-4"
@@ -55,8 +56,15 @@ export default function ChatMessage({
         )}
 
         {/* Message content with Markdown rendering */}
-        <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word">
+        <div
+          className={`prose prose-sm prose-code:text-sm max-w-none wrap-break-word overflow-x-auto ${
+            isUser
+              ? "prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground prose-code:text-primary-foreground"
+              : "dark:prose-invert"
+          }`}
+        >
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               code({ className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || "");
@@ -68,6 +76,7 @@ export default function ChatMessage({
                       style={oneDark}
                       language={match[1]}
                       PreTag="div"
+                      customStyle={{ fontSize: "0.925rem" }}
                     >
                       {codeString}
                     </SyntaxHighlighter>

@@ -1,7 +1,0 @@
-1. File: src/hooks/useTreeLayout.ts, lines 27-30
-   Issue: Uses hardcoded NODE_WIDTH/NODE_HEIGHT constants instead of node.measured?.width ?? 180 as required by the spec and Architecture Document §7.5.
-   Fix: Replace `graph.setNode(nodeId, { width: NODE_WIDTH, height: NODE_HEIGHT })` with `graph.setNode(nodeId, { width: (node as any).measured?.width ?? 180, height: (node as any).measured?.height ?? 60 })`. The TreeNode type doesn't have a measured field, so either cast or use optional chaining on an extended type. The NODE_WIDTH/NODE_HEIGHT constants can be kept as the fallback values but must not bypass the measured check.
-
-2. File: src/hooks/useTreeLayout.ts, lines 34-37
-   Issue: No guard against childrenMap containing a parentId that doesn't exist in the nodes map, which would create a dangling edge in the Dagre graph.
-   Fix: Before calling graph.setEdge(parentId, childId), add a check: only add the edge if both parentId and childId exist in the nodes map (i.e., nodes.has(parentId) && nodes.has(childId)).

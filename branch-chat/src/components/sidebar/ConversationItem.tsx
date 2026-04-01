@@ -107,7 +107,7 @@ export default function ConversationItem({
         )}
 
         {!isEditing && (
-          <div className="hidden gap-0.5 group-hover:flex">
+          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
             <Button
               variant="ghost"
               size="sm"

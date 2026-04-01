@@ -2,6 +2,9 @@
 
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import ConversationProvider from "@/components/providers/ConversationProvider";
+import UIProvider from "@/components/providers/UIProvider";
+import ConversationList from "@/components/sidebar/ConversationList";
 
 export default function ProtectedLayout({
   children,
@@ -9,18 +12,33 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b px-4 py-2">
-        <h1 className="text-lg font-semibold">BranchChat</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-        >
-          Logout
-        </Button>
-      </header>
-      <main className="flex-1">{children}</main>
-    </div>
+    <ConversationProvider>
+      <UIProvider>
+        <div className="flex h-screen">
+          {/* Sidebar */}
+          <aside className="flex w-64 flex-col border-r bg-muted/30">
+            <div className="flex items-center justify-between border-b px-3 py-2">
+              <h1 className="text-lg font-semibold">BranchChat</h1>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ConversationList />
+            </div>
+            <div className="border-t p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                Logout
+              </Button>
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 overflow-auto">{children}</main>
+        </div>
+      </UIProvider>
+    </ConversationProvider>
   );
 }

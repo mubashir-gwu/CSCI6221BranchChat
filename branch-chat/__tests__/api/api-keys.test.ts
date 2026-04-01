@@ -33,6 +33,7 @@ vi.mock("@/models/ApiKey", () => ({
     findOneAndUpdate: (...args: unknown[]) => mockApiKeyFindOneAndUpdate(...args),
     deleteOne: (...args: unknown[]) => mockApiKeyDeleteOne(...args),
   },
+  API_KEY_PROVIDERS: ["openai", "anthropic", "gemini"],
 }));
 
 // Import handlers after mocks

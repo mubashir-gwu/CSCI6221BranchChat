@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { ApiKey } from "@/models/ApiKey";
+import { ApiKey, API_KEY_PROVIDERS } from "@/models/ApiKey";
 import { encrypt } from "@/lib/encryption";
-
-const ALLOWED_PROVIDERS = ["openai", "anthropic", "gemini"];
 
 export async function PUT(
   request: Request,
@@ -17,7 +15,7 @@ export async function PUT(
 
   const { provider } = await params;
 
-  if (!ALLOWED_PROVIDERS.includes(provider)) {
+  if (!(API_KEY_PROVIDERS as readonly string[]).includes(provider)) {
     return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
   }
 
@@ -64,7 +62,7 @@ export async function DELETE(
 
   const { provider } = await params;
 
-  if (!ALLOWED_PROVIDERS.includes(provider)) {
+  if (!(API_KEY_PROVIDERS as readonly string[]).includes(provider)) {
     return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
   }
 

@@ -293,3 +293,24 @@
 - `npm run build` passes with no errors
 - `npm run dev` starts without errors
 - All 39 tests pass
+
+## F-05 Audit Cycle 1 — Fixes
+
+**Status:** Complete  
+**Date:** 2026-03-31
+
+### Fixes Applied (2/2)
+
+1. **Per-key error handling in GET route** — Wrapped the per-key `decrypt()`+`maskKey()` call inside `.map()` in a try/catch. On failure, returns `{ provider, maskedKey: "[error]", updatedAt }` so the user can still see and delete corrupted entries. Logs the error server-side via `console.error`.
+
+2. **Deduplicate ALLOWED_PROVIDERS from ApiKey model enum** — Exported `API_KEY_PROVIDERS` constant and `ApiKeyProvider` type from `src/models/ApiKey.ts`. The schema enum and the `[provider]/route.ts` validation both reference this single constant. Removed the hardcoded `ALLOWED_PROVIDERS` from the route file. Updated test mock to include the new export.
+
+### Fixes That Could Not Be Applied
+- None
+
+### New Concerns Noticed
+- None
+
+### Verification
+- `npm run build` passes with no errors
+- All 39 tests pass

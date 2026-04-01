@@ -15,11 +15,22 @@ export async function GET() {
 
     const apiKeys = await ApiKey.find({ userId: session.user.id }).lean();
 
-    const keys = apiKeys.map((k) => ({
-      provider: k.provider,
-      maskedKey: maskKey(decrypt(k.encryptedKey, k.iv, k.authTag)),
-      updatedAt: k.updatedAt.toISOString(),
-    }));
+    const keys = apiKeys.map((k) => {
+      try {
+        return {
+          provider: k.provider,
+          maskedKey: maskKey(decrypt(k.encryptedKey, k.iv, k.authTag)),
+          updatedAt: k.updatedAt.toISOString(),
+        };
+      } catch (err) {
+        console.error(`Failed to decrypt API key for provider ${k.provider}:`, err);
+        return {
+          provider: k.provider,
+          maskedKey: "[error]",
+          updatedAt: k.updatedAt.toISOString(),
+        };
+      }
+    });
 
     return NextResponse.json({ keys });
   } catch (error) {

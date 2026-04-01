@@ -24,16 +24,18 @@ export function useTreeLayout(
     });
     graph.setDefaultEdgeLabel(() => ({}));
 
-    for (const [nodeId] of nodes) {
+    for (const [nodeId, node] of nodes) {
       graph.setNode(nodeId, {
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
+        width: (node as any).measured?.width ?? NODE_WIDTH,
+        height: (node as any).measured?.height ?? NODE_HEIGHT,
       });
     }
 
     for (const [parentId, children] of childrenMap) {
       for (const childId of children) {
-        graph.setEdge(parentId, childId);
+        if (nodes.has(parentId) && nodes.has(childId)) {
+          graph.setEdge(parentId, childId);
+        }
       }
     }
 

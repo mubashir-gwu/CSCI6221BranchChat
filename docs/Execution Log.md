@@ -577,3 +577,11 @@ Updated the Gemini model entry in:
 ### Build Verification
 - `npm run build` passes with no errors
 - All 99 tests pass via `npx vitest run`
+
+### Audit Cycle 1 Fixes
+- **Date:** 2026-04-01
+- 2/2 fixes applied successfully from `docs/signals/f-10-tree-visualization/REQUIRES_REVISION`
+- Fix 1: `useTreeLayout.ts` — replaced hardcoded `NODE_WIDTH`/`NODE_HEIGHT` in `graph.setNode()` with `node.measured?.width ?? 180` / `node.measured?.height ?? 60` per spec §7.5
+- Fix 2: `useTreeLayout.ts` — added guard `nodes.has(parentId) && nodes.has(childId)` before `graph.setEdge()` to prevent dangling edges
+- `npm run build` passes after fixes
+- No new concerns noticed

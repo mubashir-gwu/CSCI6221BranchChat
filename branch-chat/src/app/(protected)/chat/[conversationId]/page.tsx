@@ -9,6 +9,7 @@ import { useActivePath } from "@/hooks/useActivePath";
 import { buildChildrenMap, findDeepestLeaf, findDescendants } from "@/lib/tree";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
+import TreeSidebar from "@/components/tree/TreeSidebar";
 import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
@@ -216,6 +217,18 @@ export default function ChatPage() {
     [childrenMap, dispatch]
   );
 
+  const handleTreeNodeClick = useCallback(
+    (nodeId: string) => {
+      dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
+      window.location.hash = nodeId;
+    },
+    [dispatch]
+  );
+
+  const handleToggleTree = useCallback(() => {
+    uiDispatch({ type: "TOGGLE_TREE" });
+  }, [uiDispatch]);
+
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       try {
@@ -251,23 +264,33 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-hidden">
-        <ChatPanel
-          activePath={activePath}
-          childrenMap={childrenMap}
-          nodesMap={state.nodes}
-          onBranchNavigate={handleBranchNavigate}
-          onDeleteNode={handleDeleteNode}
-          isLoading={uiState.isLoading}
+    <div className="flex h-full">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex-1 overflow-hidden">
+          <ChatPanel
+            activePath={activePath}
+            childrenMap={childrenMap}
+            nodesMap={state.nodes}
+            onBranchNavigate={handleBranchNavigate}
+            onDeleteNode={handleDeleteNode}
+            isLoading={uiState.isLoading}
+          />
+        </div>
+        <ChatInput
+          onSend={handleSend}
+          disabled={uiState.isLoading}
+          defaultProvider={defaultProvider}
+          defaultModel={defaultModel}
+          availableProviders={availableProviders}
         />
       </div>
-      <ChatInput
-        onSend={handleSend}
-        disabled={uiState.isLoading}
-        defaultProvider={defaultProvider}
-        defaultModel={defaultModel}
-        availableProviders={availableProviders}
+      <TreeSidebar
+        isOpen={uiState.isTreeOpen}
+        onToggle={handleToggleTree}
+        nodes={state.nodes}
+        childrenMap={childrenMap}
+        activeNodeId={state.activeNodeId}
+        onNodeClick={handleTreeNodeClick}
       />
     </div>
   );

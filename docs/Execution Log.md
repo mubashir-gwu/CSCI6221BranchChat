@@ -539,3 +539,41 @@ Updated the Gemini model entry in:
 
 ### Build Verification
 - `npm run build` passes after both fixes
+
+---
+
+## F-10: Tree Visualization
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-049: Install @xyflow/react v12 and dagre
+- Installed `@xyflow/react@12.10.2` and `@dagrejs/dagre@3.0.0`
+- Added ReactFlow CSS import to `globals.css` inside `@layer base`
+- Build passes
+
+### T-050: Implement useTreeLayout Hook with Dagre
+- Deliberation saved to `docs/decisions/tree-visualization/T-050-debate.md` and `T-050-plan.md`
+- Implemented `src/hooks/useTreeLayout.ts` with Dagre graph layout
+- Uses `rankdir: "TB"`, `nodesep: 50`, `ranksep: 70`, constant node dimensions 180x60
+- Returns `rfNodes` (type `treeNode`, with label/role/provider/isActive/hasMultipleChildren data) and `rfEdges` (type `smoothstep`)
+- Memoized with `useMemo`
+
+### T-051: Implement Custom TreeNode Component
+- Implemented `src/components/tree/TreeNode.tsx` with provider color border, role icons (User/Bot from lucide), active ring highlight, truncated content preview, and branch indicator (GitBranch icon)
+- Uses `Handle` from `@xyflow/react` for Top/Bottom connections
+- Wrapped in `memo` for performance
+
+### T-052: Implement TreeVisualization and TreeSidebar
+- `TreeVisualization` renders `<ReactFlow>` with custom `nodeTypes`, `Controls`, and `MiniMap`. Supports pan/zoom and node click navigation. Shows empty state when no nodes.
+- `TreeSidebar` is a collapsible right-side panel (320px wide) with toggle button always visible. Connected to `UIContext.isTreeOpen` state via `TOGGLE_TREE` action.
+- Wired into `chat/[conversationId]/page.tsx`: clicking a tree node sets `activeNodeId` and updates URL hash. Layout uses flex row with chat taking remaining space.
+
+### T-053: Write Tests
+- `TreeVisualization.test.tsx`: 4 tests — correct node count, active node highlight, node click callback, empty state
+- `ModelSelector.test.tsx`: 4 tests — provider groups with colors, current selection display, onChange callback, provider filtering by API keys
+- All 8 new tests pass, full suite of 99 tests passes
+
+### Build Verification
+- `npm run build` passes with no errors
+- All 99 tests pass via `npx vitest run`

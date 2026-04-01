@@ -1,5 +1,42 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { connectDB } from "@/lib/db";
+import { Conversation } from "@/models/Conversation";
+import { Node } from "@/models/Node";
 
-export async function GET() {
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  await connectDB();
+
+  const conversation = await Conversation.findOne({
+    _id: id,
+    userId: session.user.id,
+  });
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const nodes = await Node.find({ conversationId: id }).lean();
+
+  return NextResponse.json({
+    nodes: nodes.map((n) => ({
+      id: n._id.toString(),
+      parentId: n.parentId?.toString() ?? null,
+      role: n.role,
+      content: n.content,
+      provider: n.provider ?? null,
+      model: n.model ?? null,
+      createdAt: n.createdAt.toISOString(),
+    })),
+  });
 }

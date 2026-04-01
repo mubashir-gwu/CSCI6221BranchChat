@@ -1,0 +1,4 @@
+Audit passed. All cycle 1 fixes verified. No critical or medium issues.
+
+Low-severity note:
+- `nodeId` prop in BranchIndicator is declared but unused in the component body. Matches spec props; cosmetic only.

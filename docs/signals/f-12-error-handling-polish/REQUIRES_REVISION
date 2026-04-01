@@ -1,9 +1,0 @@
-1. **Test mock missing `Node.deleteOne` — 3 test failures** (Medium)
-   - File: `__tests__/api/llm-chat.test.ts`, lines 54-59
-   - Issue: The cycle 1 fix added `Node.deleteOne()` to `api/llm/chat/route.ts:160` to clean up orphaned user nodes on LLM failure. The test mock for `Node` only defines `find` and `create` — it is missing `deleteOne`. When LLM error tests run, `Node.deleteOne()` throws `TypeError`, caught by the outer catch block, returning 500 instead of the expected 429/502.
-   - Fix: Add `deleteOne` to the Node mock in the test file. Create `const mockNodeDeleteOne = vi.fn()` and add `deleteOne: (...args: unknown[]) => mockNodeDeleteOne(...args)` to the Node mock object. In `beforeEach`, add `mockNodeDeleteOne.mockResolvedValue({ deletedCount: 1 })`.
-
-2. **Test "should preserve user node on LLM failure for retry" is semantically stale** (Low)
-   - File: `__tests__/api/llm-chat.test.ts`, lines 307-321
-   - Issue: The test is named "should preserve user node on LLM failure for retry" but the production code now deletes the user node on failure (route.ts:160). The test passes by accident because it only checks `mockNodeCreate` call count, not deletion.
-   - Fix: Rename the test to "should delete user node on LLM failure to prevent orphans". Update assertions to verify: (a) `mockNodeCreate` was called once with the user node data, and (b) `mockNodeDeleteOne` was called once with the user node's `_id`. This requires the `mockNodeDeleteOne` mock from fix #1.

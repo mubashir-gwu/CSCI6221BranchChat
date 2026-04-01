@@ -1,0 +1,18 @@
+1. **File:** `branch-chat/src/lib/db.ts`, function `connectDB()`, lines 10-17
+   **Issue:** If `mongoose.connect()` rejects, the rejected promise is permanently cached. All subsequent calls return the same rejected promise — the app cannot recover without a process restart.
+   **Fix:** Wrap `cached.conn = await cached.promise;` in a try/catch. In the catch block, set `cached.promise = null` then re-throw the error. This allows the next call to `connectDB()` to retry the connection.
+   ```typescript
+   export async function connectDB() {
+     if (cached.conn) return cached.conn;
+     if (!cached.promise) {
+       cached.promise = mongoose.connect(MONGODB_URI);
+     }
+     try {
+       cached.conn = await cached.promise;
+     } catch (err) {
+       cached.promise = null;
+       throw err;
+     }
+     return cached.conn;
+   }
+   ```

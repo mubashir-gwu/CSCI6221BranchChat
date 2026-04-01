@@ -115,6 +115,8 @@ No security issues found.
 - Critical issues: 0
 - Medium issues: 0
 - Low issues: 2
-- Recommendation: **PROCEED**
+- Recommendation: **FIX FIRST**
 
-All acceptance criteria pass. The two low-severity items are defensive concerns that don't affect correctness or user experience. The `node.measured` deviation is acceptable because the app's `TreeNode` type doesn't carry a `measured` field — the spec's pseudocode assumed a data flow where ReactFlow's internal node objects are fed back into Dagre, but the actual implementation correctly uses its own TreeNode type with constant fallback dimensions for initial layout. The `isTreeOpen` addition to UIContext and the expanded TreeSidebar props are reasonable architectural decisions.
+Two low-severity issues require revision before proceeding:
+1. `useTreeLayout` must use `node.measured?.width ?? 180` instead of hardcoded constants, per spec and Architecture Document §7.5.
+2. `useTreeLayout` edge loop needs a guard to skip edges where parentId or childId is missing from the nodes map.

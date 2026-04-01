@@ -7,6 +7,7 @@ import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
 import { useActivePath } from "@/hooks/useActivePath";
 import { buildChildrenMap, findDeepestLeaf, findDescendants } from "@/lib/tree";
+import { Button } from "@/components/ui/button";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import TreeSidebar from "@/components/tree/TreeSidebar";
@@ -229,6 +230,29 @@ export default function ChatPage() {
     uiDispatch({ type: "TOGGLE_TREE" });
   }, [uiDispatch]);
 
+  const handleExport = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/export`);
+      if (!res.ok) {
+        toast.error("Failed to export conversation");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = res.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="(.+)"/);
+      a.download = match?.[1] ?? "conversation.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Network error. Please try again.");
+    }
+  }, [conversationId]);
+
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       try {
@@ -266,6 +290,14 @@ export default function ChatPage() {
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex items-center justify-between border-b px-4 py-2">
+          <h2 className="text-sm font-semibold truncate">
+            {conversation?.title ?? "Chat"}
+          </h2>
+          <Button size="sm" variant="outline" onClick={handleExport}>
+            Export
+          </Button>
+        </div>
         <div className="flex-1 overflow-hidden">
           <ChatPanel
             activePath={activePath}

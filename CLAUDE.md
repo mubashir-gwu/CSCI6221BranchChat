@@ -11,6 +11,7 @@ These are the authoritative source documents. If anything in this file seems amb
 - **Software Requirements Document:** `docs/SRD BranchChat.docx`
 - **Architecture Design Document:** `docs/Architecture Document.md`
 - **Architecture Deliberation Transcript:** `docs/decisions/Architecture Debate.md`
+- **Runtime log with workarounds and known issues from previous features:** `docs/Execution Log.md`
 
 ## Tech Stack (exact versions)
 

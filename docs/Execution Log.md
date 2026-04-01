@@ -459,3 +459,17 @@
 
 ### Verification
 - `npm run build` passes with no errors
+
+## F-08: Chat Interface & LLM Integration — Audit Cycle 2 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### Fixes Applied (1/1)
+
+1. **Tests not updated for parentNodeId validation fix** — Updated the default `mockNodeFind` mock in `beforeEach` (`__tests__/api/llm-chat.test.ts`) to return a node with `_id: "node-1"` so parentNodeId validation passes. All 8 previously failing tests now pass (16/16 total).
+
+### Verification
+- All 16 tests in `__tests__/api/llm-chat.test.ts` pass
+- `npm run build` passes with no errors
+- No new concerns noticed

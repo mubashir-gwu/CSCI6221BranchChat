@@ -121,7 +121,18 @@ beforeEach(() => {
     }),
   });
   mockNodeFind.mockReturnValue({
-    lean: () => [],
+    lean: () => [
+      {
+        _id: { toString: () => "node-1" },
+        conversationId: { toString: () => "conv-1" },
+        parentId: null,
+        role: "user",
+        content: "Previous message",
+        provider: null,
+        model: null,
+        createdAt: now,
+      },
+    ],
   });
   mockBuildContext.mockReturnValue([
     { role: "user", content: "Hello, how are you?" },

@@ -1,14 +1,40 @@
-import { NextResponse } from "next/server";
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
+import { connectDB } from '@/lib/db';
+import { User } from '@/models/User';
 
-// Stub — will be replaced with NextAuth v5 config in F-02
-export async function GET() {
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
-}
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        await connectDB();
+        const user = await User.findOne({ email: (credentials.email as string).toLowerCase() });
+        if (!user) return null;
+        const isValid = await bcrypt.compare(credentials.password as string, user.hashedPassword);
+        if (!isValid) return null;
+        return { id: user._id.toString(), email: user.email };
+      },
+    }),
+  ],
+  session: { strategy: 'jwt' },
+  pages: { signIn: '/login' },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) { token.id = user.id; }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token?.id) { session.user.id = token.id as string; }
+      return session;
+    },
+  },
+});
 
-export async function POST() {
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
-}
-
-export async function auth() {
-  return null;
-}
+export const { GET, POST } = handlers;

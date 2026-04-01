@@ -89,7 +89,7 @@ For each choice, the deliberation reference is noted where applicable.
 Every directory and file that will exist in the project:
 
 ```
-branchChat/
+branch-chat/
 ├── .env.local                          # Environment variables (git-ignored)
 ├── .env.example                        # Template with placeholder values
 ├── next.config.ts                      # Next.js configuration
@@ -622,7 +622,7 @@ function validateTreeIntegrity(nodes):
 
 | Variable | Dev Value | Prod Value |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/branchChat` | Atlas connection string |
+| `MONGODB_URI` | `mongodb://localhost:27017/branch-chat` | Atlas connection string |
 | `AUTH_SECRET` | Any random string (`openssl rand -base64 32`) | Strong random string |
 | `AUTH_URL` | `http://localhost:3000` | Production URL |
 | `ENCRYPTION_KEY` | Any 64-char hex (`openssl rand -hex 32`) | Strong production key |
@@ -637,7 +637,7 @@ Note: NextAuth v5 uses the `AUTH_` prefix, not `NEXTAUTH_`. LLM provider API key
 ```bash
 npm install
 cp .env.example .env.local       # Fill AUTH_SECRET, ENCRYPTION_KEY
-docker run -d -p 27017:27017 --name branchChat-mongo mongo:7
+docker run -d -p 27017:27017 --name branch-chat-mongo mongo:7
 npm run dev                       # Turbopack dev server → localhost:3000
 ```
 Mock provider available automatically. No external API keys needed.

@@ -68,7 +68,7 @@ These are the authoritative source documents. If anything in this file seems amb
 ## Folder Structure
 
 ```
-branchChat/
+branch-chat/
 ├── .env.local
 ├── .env.example
 ├── next.config.ts
@@ -335,7 +335,7 @@ AES-256-GCM. Key: `ENCRYPTION_KEY` (64 hex chars). IV: 12 random bytes. Auth tag
 ## Environment Variables
 
 ```bash
-MONGODB_URI=mongodb://localhost:27017/branchChat
+MONGODB_URI=mongodb://localhost:27017/branch-chat
 AUTH_SECRET=<random-string>              # openssl rand -base64 32
 AUTH_URL=http://localhost:3000           # production URL in prod
 ENCRYPTION_KEY=<64-char-hex-string>      # openssl rand -hex 32
@@ -367,7 +367,7 @@ ENCRYPTION_KEY=<64-char-hex-string>      # openssl rand -hex 32
 # Local dev
 npm install
 cp .env.example .env.local              # Fill AUTH_SECRET, ENCRYPTION_KEY
-docker run -d -p 27017:27017 --name branchChat-mongo mongo:7
+docker run -d -p 27017:27017 --name branch-chat-mongo mongo:7
 npm run dev                              # Turbopack → localhost:3000
 
 # Production (Vercel + Atlas)

@@ -36,6 +36,12 @@ export async function POST(request: Request) {
 
     const { conversationId, parentNodeId, content, provider, model } = body;
 
+    // Auth check — before any validation to prevent information leakage
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // Validate required fields
     if (!conversationId || content === undefined || content === null || !provider || !model) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -60,12 +66,6 @@ export async function POST(request: Request) {
     const modelDef = providerModels?.find((m) => m.id === model);
     if (!modelDef) {
       return NextResponse.json({ error: `Invalid model: ${model}` }, { status: 400 });
-    }
-
-    // Auth check
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
@@ -108,6 +108,14 @@ export async function POST(request: Request) {
         },
       ])
     );
+
+    // Validate parentNodeId exists in this conversation
+    if (parentNodeId !== null && !nodesMap.has(parentNodeId)) {
+      return NextResponse.json(
+        { error: "Parent node not found in this conversation" },
+        { status: 400 }
+      );
+    }
 
     const messages = buildContext(parentNodeId, content.trim(), nodesMap, modelDef.contextWindow);
 

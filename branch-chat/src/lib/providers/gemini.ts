@@ -11,14 +11,25 @@ export const geminiProvider: LLMProvider = {
   ): Promise<LLMResponse> {
     const ai = new GoogleGenAI({ apiKey });
 
-    const history = messages.slice(0, -1).map((m) => ({
+    const systemMessages = messages.filter((m) => m.role === 'system');
+    const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+
+    const history = nonSystemMessages.slice(0, -1).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
 
-    const chat = ai.chats.create({ model, history });
+    const systemInstruction = systemMessages.length > 0
+      ? systemMessages.map((m) => m.content).join('\n')
+      : undefined;
+
+    const chat = ai.chats.create({
+      model,
+      history,
+      ...(systemInstruction ? { config: { systemInstruction } } : {}),
+    });
     const response = await chat.sendMessage({ message: lastMessage.content });
 
     return {

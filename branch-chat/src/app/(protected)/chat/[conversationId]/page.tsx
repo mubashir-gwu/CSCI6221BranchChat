@@ -38,6 +38,7 @@ export default function ChatPage() {
     dispatch({ type: "SET_ACTIVE_CONVERSATION", payload: conversationId });
 
     async function loadNodes() {
+      uiDispatch({ type: "SET_LOADING", payload: true });
       try {
         const res = await fetch(`/api/conversations/${conversationId}/nodes`);
         if (!res.ok) return;
@@ -50,33 +51,42 @@ export default function ChatPage() {
 
         // Set active node to deepest leaf
         if (nodesMap.size > 0) {
-          const childrenMap = buildChildrenMap(nodesMap);
-          let leafId: string | null = null;
-          // Find root (parentId === null)
-          for (const [id, node] of nodesMap) {
-            if (node.parentId === null) {
-              leafId = id;
-              break;
+          // Check URL hash for previously active node
+          const hashNodeId = window.location.hash.replace("#", "");
+          if (hashNodeId && nodesMap.has(hashNodeId)) {
+            dispatch({ type: "SET_ACTIVE_NODE", payload: hashNodeId });
+          } else {
+            const childrenMap = buildChildrenMap(nodesMap);
+            let leafId: string | null = null;
+            // Find root (parentId === null)
+            for (const [id, node] of nodesMap) {
+              if (node.parentId === null) {
+                leafId = id;
+                break;
+              }
             }
-          }
-          // Walk to deepest first-child leaf
-          if (leafId) {
-            let currentId: string | null = leafId;
-            while (currentId) {
-              const childIds: string[] = childrenMap.get(currentId) ?? [];
-              if (childIds.length === 0) break;
-              currentId = childIds[0];
+            // Walk to deepest first-child leaf
+            if (leafId) {
+              let currentId: string | null = leafId;
+              while (currentId) {
+                const childIds: string[] = childrenMap.get(currentId) ?? [];
+                if (childIds.length === 0) break;
+                currentId = childIds[0];
+              }
+              dispatch({ type: "SET_ACTIVE_NODE", payload: currentId });
+              window.location.hash = currentId ?? "";
             }
-            dispatch({ type: "SET_ACTIVE_NODE", payload: currentId });
           }
         }
       } catch {
         toast.error("Failed to load conversation");
+      } finally {
+        uiDispatch({ type: "SET_LOADING", payload: false });
       }
     }
 
     loadNodes();
-  }, [conversationId, dispatch]);
+  }, [conversationId, dispatch, uiDispatch]);
 
   // Fetch available providers (API keys)
   useEffect(() => {
@@ -140,6 +150,7 @@ export default function ChatPage() {
 
         dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
         dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
+        window.location.hash = assistantNode.id;
 
         // Update selected model to match what was just used
         uiDispatch({
@@ -158,6 +169,7 @@ export default function ChatPage() {
   const handleBranchNavigate = useCallback(
     (nodeId: string) => {
       dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
+      window.location.hash = nodeId;
     },
     [dispatch]
   );

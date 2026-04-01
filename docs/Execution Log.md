@@ -442,3 +442,20 @@
 - `npm run build` passes with no errors
 - `npm run dev` starts on localhost:3000 (Turbopack, syntax highlighting works)
 - All 82 tests pass (8 test files)
+
+## F-08: Chat Interface & LLM Integration — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### Fixes Applied (6/6)
+
+1. **ChatInput selection state not synced with prop changes** — Added `useEffect` in `ChatInput.tsx` to sync `selection` state when `defaultProvider`/`defaultModel` props change.
+2. **Gemini provider does not handle system role messages** — Separated system messages from history and passed via `config.systemInstruction` in `gemini.ts`.
+3. **No loading indicator during initial node fetch** — Added `SET_LOADING` true/false around `loadNodes()` in `chat/[conversationId]/page.tsx`.
+4. **First-child leaf selection ignores previously active branch** — Added URL hash (`#nodeId`) check on page load; update hash on send, branch navigate, and initial leaf walk.
+5. **Auth check after input validation leaks valid provider/model names** — Moved auth check to immediately after JSON parsing in `llm/chat/route.ts`, before any input validation.
+6. **parentNodeId not validated against conversation** — Added explicit check after building `nodesMap` in `llm/chat/route.ts`, returns 400 if parentNodeId not found.
+
+### Verification
+- `npm run build` passes with no errors

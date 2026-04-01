@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, type KeyboardEvent } from "react";
+import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { SendIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
@@ -25,6 +25,10 @@ export default function ChatInput({
     provider: defaultProvider,
     model: defaultModel,
   });
+
+  useEffect(() => {
+    setSelection({ provider: defaultProvider, model: defaultModel });
+  }, [defaultProvider, defaultModel]);
 
   const handleSend = useCallback(() => {
     const trimmed = message.trim();

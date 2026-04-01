@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
 import { useActivePath } from "@/hooks/useActivePath";
-import { buildChildrenMap } from "@/lib/tree";
+import { buildChildrenMap, findDeepestLeaf } from "@/lib/tree";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import { MODELS } from "@/constants/models";
@@ -209,10 +209,11 @@ export default function ChatPage() {
 
   const handleBranchNavigate = useCallback(
     (nodeId: string) => {
-      dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
-      window.location.hash = nodeId;
+      const leafId = findDeepestLeaf(nodeId, childrenMap);
+      dispatch({ type: "SET_ACTIVE_NODE", payload: leafId });
+      window.location.hash = leafId;
     },
-    [dispatch]
+    [childrenMap, dispatch]
   );
 
   return (

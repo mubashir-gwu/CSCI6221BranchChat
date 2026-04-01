@@ -473,3 +473,20 @@
 - All 16 tests in `__tests__/api/llm-chat.test.ts` pass
 - `npm run build` passes with no errors
 - No new concerns noticed
+
+## F-08: Gemini Model ID Fix
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### Issue
+The Gemini model ID `gemini-2.0-flash` is no longer available on Google's free tier (quota is 0). Testing with the standalone `@google/genai` SDK confirmed the API returns 429 `RESOURCE_EXHAUSTED` with `limit: 0` for this model. The correct current model ID is `gemini-3-flash-preview`.
+
+### Fix
+Updated the Gemini model entry in:
+- `src/constants/models.ts` — `gemini-2.0-flash` → `gemini-3-flash-preview`, display name → `Gemini 3 Flash`
+- `docs/Task Breakdown Document.md` — same change in the T-017 models constant definition
+
+### Workaround / Notes
+- The audit report for F-04 (`docs/audits/f-04-*-audit-cycle-1.md`) references the old model name in a passing note; left as-is since it reflects what was true at audit time.
+- If Google deprecates this model in the future, update the `gemini` array in `src/constants/models.ts` again.

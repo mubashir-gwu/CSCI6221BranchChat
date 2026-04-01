@@ -3,6 +3,7 @@ import {
   getPathToRoot,
   buildChildrenMap,
   findDescendants,
+  validateTreeIntegrity,
 } from "@/lib/tree";
 import type { TreeNode } from "@/types/tree";
 
@@ -147,5 +148,72 @@ describe("findDescendants", () => {
   it("handles node not in children map", () => {
     const cm = new Map<string, string[]>();
     expect(findDescendants("unknown", cm)).toEqual([]);
+  });
+});
+
+function makeExportNode(
+  id: string,
+  parentId: string | null,
+  childrenIds: string[] = []
+) {
+  return {
+    id,
+    parentId,
+    childrenIds,
+    role: "user" as const,
+    content: `content-${id}`,
+    provider: null,
+    model: null,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+describe("validateTreeIntegrity", () => {
+  it("accepts a valid tree", () => {
+    const nodes = [
+      makeExportNode("root", null, ["a", "b"]),
+      makeExportNode("a", "root", ["c"]),
+      makeExportNode("b", "root"),
+      makeExportNode("c", "a"),
+    ];
+    expect(() => validateTreeIntegrity(nodes)).not.toThrow();
+  });
+
+  it("accepts a single-node tree", () => {
+    const nodes = [makeExportNode("root", null)];
+    expect(() => validateTreeIntegrity(nodes)).not.toThrow();
+  });
+
+  it("throws for multiple roots", () => {
+    const nodes = [
+      makeExportNode("root1", null),
+      makeExportNode("root2", null),
+    ];
+    expect(() => validateTreeIntegrity(nodes)).toThrow("exactly one root");
+  });
+
+  it("throws for zero roots", () => {
+    const nodes = [
+      makeExportNode("a", "b"),
+      makeExportNode("b", "a"),
+    ];
+    expect(() => validateTreeIntegrity(nodes)).toThrow("exactly one root");
+  });
+
+  it("throws for orphaned parentId references", () => {
+    const nodes = [
+      makeExportNode("root", null),
+      makeExportNode("child", "nonexistent"),
+    ];
+    expect(() => validateTreeIntegrity(nodes)).toThrow("non-existent parent");
+  });
+
+  it("throws for disconnected nodes", () => {
+    const nodes = [
+      makeExportNode("root", null),
+      makeExportNode("island-a", "island-b"),
+      makeExportNode("island-b", "island-a"),
+    ];
+    expect(() => validateTreeIntegrity(nodes)).toThrow("disconnected");
   });
 });

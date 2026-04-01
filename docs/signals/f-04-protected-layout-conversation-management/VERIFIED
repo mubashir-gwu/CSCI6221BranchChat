@@ -1,7 +1,0 @@
-Audit passed. No critical or blocking issues found.
-
-Low-severity notes:
-1. API routes lack try-catch around request.json() — malformed bodies return 500 instead of 400.
-2. API routes lack try-catch around Mongoose operations — invalid ObjectId format in URL params causes CastError (500) instead of 404. This is the only medium-severity item but does not warrant blocking; it's a common early-implementation pattern.
-3. ConfirmDialog passes showCloseButton={false} which may not be a recognized shadcn/ui prop — functionally harmless.
-4. Root layout.tsx imports Toaster directly instead of using the ToastProvider wrapper — functionally identical, acceptable deviation.

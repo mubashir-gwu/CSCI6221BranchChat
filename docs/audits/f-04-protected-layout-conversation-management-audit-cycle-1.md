@@ -166,6 +166,12 @@ Tasks covered: T-017, T-018, T-019, T-020, T-021, T-022, T-023
 - Critical issues: 0
 - Medium issues: 1 (Missing try-catch for Mongoose CastError on invalid ObjectIds)
 - Low issues: 2 (Missing try-catch for malformed JSON body; `showCloseButton` prop)
-- Recommendation: **PROCEED**
+- Recommendation: **FIX FIRST**
 
-All acceptance criteria for T-017 through T-023 are met. The one medium issue (invalid ObjectId handling) is a robustness concern that results in 500 instead of 400/404 for malformed IDs — this is common in early implementations and does not block feature progress. The architecture is correctly aligned, security is sound, and forward compatibility is strong.
+All acceptance criteria for T-017 through T-023 are met. However, all 4 issues should be fixed for robustness before proceeding:
+1. Wrap all API route handlers in try-catch with CastError → 400 handling.
+2. Ensure malformed JSON request bodies return 400, not 500.
+3. Remove unrecognized `showCloseButton` prop from ConfirmDialog.
+4. Use `ToastProvider` wrapper in root layout per T-021 spec.
+
+See `docs/signals/f-04-protected-layout-conversation-management/REQUIRES_REVISION` for detailed fix instructions.

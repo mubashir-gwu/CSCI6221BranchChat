@@ -1,0 +1,21 @@
+Audit cycle 1 found 1 medium and 2 low issues that should be fixed for robustness.
+
+1. **Wrap all API route handlers in try-catch with invalid ObjectId handling**
+   - Files: `src/app/api/conversations/route.ts`, `src/app/api/conversations/[id]/route.ts`, `src/app/api/conversations/[id]/nodes/route.ts`, `src/app/api/conversations/[id]/nodes/[nodeId]/route.ts`
+   - Issue: Mongoose throws a `CastError` when an invalid ObjectId string (e.g. `"abc"`) is passed as `[id]` or `[nodeId]` in URL params. This results in an unhandled 500 instead of a clean 400 or 404. Similarly, database connection failures or unexpected errors are unhandled.
+   - Fix: Wrap the body of every exported handler function (GET, POST, PATCH, DELETE) in a try-catch. In the catch block, check if `error.name === "CastError"` and return `400 { error: "Invalid ID format" }`. For all other errors, return `500 { error: "Internal server error" }`. Keep auth checks (the `session?.user?.id` guard) outside/above the try-catch since they don't throw.
+
+2. **Wrap `request.json()` calls in try-catch for malformed body handling**
+   - Files: `src/app/api/conversations/route.ts` (POST handler, line 39), `src/app/api/conversations/[id]/route.ts` (PATCH handler, line 17)
+   - Issue: `await request.json()` throws if the request body is missing, empty, or not valid JSON. This results in a 500 instead of a 400.
+   - Fix: This can be handled by the same try-catch from fix #1. The `request.json()` call is already inside the handler body, so wrapping in try-catch will catch JSON parse errors too. However, for a better error message, move `request.json()` into its own try-catch that returns `400 { error: "Invalid request body" }`, or catch `SyntaxError` specifically in the outer catch. Either approach is acceptable — the key requirement is that malformed JSON returns 400, not 500.
+
+3. **Remove `showCloseButton={false}` prop from ConfirmDialog**
+   - File: `src/components/common/ConfirmDialog.tsx` (line 34)
+   - Issue: `showCloseButton` is not a standard shadcn/ui `DialogContent` prop. It is silently ignored or may produce a React DOM warning about unrecognized props.
+   - Fix: Remove `showCloseButton={false}` from the `<DialogContent>` JSX. The default close button behavior from shadcn's Dialog (X button in corner) is acceptable for a confirm dialog since there is already a Cancel button. If hiding the X is truly desired, use shadcn's approach of omitting `<DialogClose />` or styling it, but do not pass an unrecognized prop.
+
+4. **Use ToastProvider wrapper in root layout instead of direct Toaster import**
+   - File: `src/app/layout.tsx` (lines 6, 25)
+   - Issue: The root layout imports `Toaster` directly from `@/components/ui/sonner` instead of using the `ToastProvider` wrapper component at `src/components/common/ToastProvider.tsx`. Task T-021 specifies: "Add [ToastProvider] to root layout.tsx".
+   - Fix: In `src/app/layout.tsx`, replace `import { Toaster } from "@/components/ui/sonner"` with `import ToastProvider from "@/components/common/ToastProvider"`. Replace `<Toaster />` with `<ToastProvider />` in the JSX.

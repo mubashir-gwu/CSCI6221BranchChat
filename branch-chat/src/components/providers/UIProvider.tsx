@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useMemo, useEffect, useCallback } from "react";
+import { useReducer, useMemo, useEffect, useCallback, useRef } from "react";
 import { UIContext, UIState, UIAction } from "@/contexts/UIContext";
 import { MODELS } from "@/constants/models";
 
@@ -46,6 +46,11 @@ export default function UIProvider({
 }) {
   const [state, dispatch] = useReducer(uiReducer, initialState);
 
+  const selectedProviderRef = useRef(state.selectedProvider);
+  useEffect(() => {
+    selectedProviderRef.current = state.selectedProvider;
+  }, [state.selectedProvider]);
+
   const refreshProviders = useCallback(async () => {
     try {
       const res = await fetch("/api/settings/api-keys");
@@ -55,7 +60,7 @@ export default function UIProvider({
       dispatch({ type: "SET_AVAILABLE_PROVIDERS", payload: providers });
 
       // If current selected provider has no key, switch to first available
-      if (providers.length > 0 && !providers.includes(state.selectedProvider)) {
+      if (providers.length > 0 && !providers.includes(selectedProviderRef.current)) {
         const firstProvider = providers[0] as keyof typeof MODELS;
         const firstModel = MODELS[firstProvider]?.[0];
         if (firstModel) {
@@ -68,7 +73,7 @@ export default function UIProvider({
     } catch {
       // Silently fail
     }
-  }, [state.selectedProvider]);
+  }, []);
 
   useEffect(() => {
     refreshProviders();

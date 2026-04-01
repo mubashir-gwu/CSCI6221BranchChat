@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
@@ -29,6 +29,7 @@ function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
 export default function ChatPage() {
   const params = useParams<{ conversationId: string }>();
   const conversationId = params.conversationId;
+  const router = useRouter();
 
   const { state, dispatch } = useConversation();
   const { state: uiState, dispatch: uiDispatch } = useUI();
@@ -158,7 +159,11 @@ export default function ChatPage() {
           let showRetry = false;
 
           if (status === 422) {
-            errorMsg = `No API key found for ${provider}. Add one in Settings.`;
+            errorMsg = `No API key found for ${provider}.`;
+            toast.error(errorMsg, {
+              action: { label: "Go to Settings", onClick: () => router.push("/settings") },
+            });
+            return;
           } else if (status === 429) {
             errorMsg = `Rate limited by ${provider}. Please try again in a moment.`;
             showRetry = true;

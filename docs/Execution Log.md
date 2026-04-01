@@ -660,3 +660,29 @@ Updated the Gemini model entry in:
 - `npm run build` passes with zero errors
 - `npm test` passes: 121 tests across 13 test files
 - Updated ModelSelector test to match new T-060 behavior (providers shown but disabled instead of hidden)
+
+## F-12: Error Handling & Polish — Audit Cycle 2 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### Fixes Applied: 3/3
+
+1. **Orphaned user node on LLM failure** — `src/app/api/llm/chat/route.ts`: Added `Node.deleteOne` cleanup in the LLM error catch block. If the failed message was the first in a conversation, `rootNodeId` is also reset to `null`. This prevents orphaned user nodes from creating duplicate branches on retry.
+
+2. **422 toast missing clickable settings link** — `src/app/(protected)/chat/[conversationId]/page.tsx`: Added `useRouter` and changed the 422 toast to use sonner's `action` option with a "Go to Settings" button that navigates to `/settings`.
+
+3. **Stale closure in UIProvider.refreshProviders** — `src/components/providers/UIProvider.tsx`: Replaced `state.selectedProvider` dependency in `useCallback` with a `useRef` that syncs via `useEffect`. The callback now has an empty dependency array and reads the ref for current state.
+
+### Build Verification
+- `npm run build` passes with zero errors
+
+### Audit Cycle 2 — Fixer Pass
+
+**Fixes applied:** 2/2
+
+1. **Test mock missing `Node.deleteOne`** — `__tests__/api/llm-chat.test.ts`: Added `mockNodeDeleteOne` to the Node mock and initialized it with `mockResolvedValue({ deletedCount: 1 })` in `beforeEach`. This unblocks the 3 LLM error tests (429/502) that were hitting `TypeError` on the unmocked `deleteOne` call.
+
+2. **Stale test "should preserve user node on LLM failure for retry"** — `__tests__/api/llm-chat.test.ts`: Renamed to "should delete user node on LLM failure to prevent orphans" and added assertion that `mockNodeDeleteOne` was called with the user node's `_id`.
+
+**Build:** passes. **Tests:** 16/16 pass.

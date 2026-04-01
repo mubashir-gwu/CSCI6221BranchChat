@@ -51,10 +51,12 @@ vi.mock("@/models/ApiKey", () => ({
 // Mock Node model
 const mockNodeFind = vi.fn();
 const mockNodeCreate = vi.fn();
+const mockNodeDeleteOne = vi.fn();
 vi.mock("@/models/Node", () => ({
   Node: {
     find: (...args: unknown[]) => mockNodeFind(...args),
     create: (...args: unknown[]) => mockNodeCreate(...args),
+    deleteOne: (...args: unknown[]) => mockNodeDeleteOne(...args),
   },
 }));
 
@@ -134,6 +136,7 @@ beforeEach(() => {
       },
     ],
   });
+  mockNodeDeleteOne.mockResolvedValue({ deletedCount: 1 });
   mockBuildContext.mockReturnValue([
     { role: "user", content: "Hello, how are you?" },
   ]);
@@ -304,7 +307,7 @@ describe("POST /api/llm/chat", () => {
     expect(data.error).toBe("openai API error");
   });
 
-  it("should preserve user node on LLM failure for retry", async () => {
+  it("should delete user node on LLM failure to prevent orphans", async () => {
     mockSendMessage.mockRejectedValue(new Error("LLM failed"));
 
     await POST(makeRequest(validBody));
@@ -317,6 +320,8 @@ describe("POST /api/llm/chat", () => {
         content: "Hello, how are you?",
       })
     );
-    // No assistant node created (only 1 call total)
+    // User node should have been deleted to prevent orphans
+    expect(mockNodeDeleteOne).toHaveBeenCalledTimes(1);
+    expect(mockNodeDeleteOne).toHaveBeenCalledWith({ _id: expect.anything() });
   });
 });

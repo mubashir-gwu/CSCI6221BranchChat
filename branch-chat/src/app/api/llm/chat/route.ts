@@ -156,7 +156,13 @@ export async function POST(request: Request) {
         { status: 201 }
       );
     } catch (llmError: any) {
-      // User node is kept for retry (FR-035)
+      // Clean up the user node on LLM failure to avoid orphaned branches
+      await Node.deleteOne({ _id: userNode._id });
+      // If this was the first message, reset rootNodeId
+      if (parentNodeId === null) {
+        await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
+      }
+
       if (llmError?.status === 429) {
         return NextResponse.json(
           { error: `Rate limited by ${provider}.` },

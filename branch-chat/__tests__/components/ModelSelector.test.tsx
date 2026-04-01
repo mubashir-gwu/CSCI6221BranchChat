@@ -21,11 +21,13 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuItem: ({
     children,
     onClick,
+    disabled,
   }: {
     children: React.ReactNode;
     onClick: () => void;
+    disabled?: boolean;
   }) => (
-    <button data-testid="dropdown-item" onClick={onClick}>
+    <button data-testid="dropdown-item" onClick={onClick} disabled={disabled}>
       {children}
     </button>
   ),
@@ -92,7 +94,7 @@ describe("ModelSelector", () => {
     });
   });
 
-  it("only shows providers that have API keys", () => {
+  it("shows all providers but marks those without keys as disabled", () => {
     render(
       <ModelSelector
         value={{ provider: "openai", model: "gpt-4o" }}
@@ -102,7 +104,7 @@ describe("ModelSelector", () => {
     );
 
     expect(screen.getByText("OpenAI")).toBeDefined();
-    expect(screen.queryByText("Anthropic")).toBeNull();
-    expect(screen.queryByText("Google Gemini")).toBeNull();
+    // Providers without keys are shown but with "(no key)" label
+    expect(screen.getAllByText("(no key)").length).toBeGreaterThanOrEqual(2);
   });
 });

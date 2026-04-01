@@ -629,3 +629,34 @@ Updated the Gemini model entry in:
 - Added 6 `validateTreeIntegrity` tests to `__tests__/lib/tree.test.ts`
 - All 121 tests pass across 13 test files
 - `npm run build` passes with no errors
+
+## F-12: Error Handling & Polish
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-059: Implement LLM Error Handling with Toast Notifications
+- Replaced generic error toast with status-code-specific messages in chat page `handleSend`
+- 422 → missing API key message, 429 → rate limit with Retry button, 502 → invalid key or API error, 504 → timeout with Retry, network error → Retry button
+- No partial assistant nodes created on failure (user optimistic node removed on error)
+
+### T-060: Implement Provider Availability Check in ModelSelector
+- Moved available providers fetch from chat page local state into UIProvider (cached in UIContext)
+- Removed workaround from commit d3dc7d7 — provider auto-fallback now handled in UIProvider
+- ModelSelector now shows ALL providers, disabling those without keys with "(no key)" label
+- Selecting a disabled provider shows toast directing user to Settings
+- Mock provider always enabled in development
+
+### T-061: Add Keyboard Shortcuts and Accessibility Basics
+- Added `aria-label` to BranchIndicator, ChatMessage delete button, ChatInput textarea/send button
+- Added `role="menu"` and `role="menuitem"` with `aria-current` to BranchMenu
+- Added `role="button"`, `tabIndex`, keyboard handler (Enter/Space), `aria-label`, `aria-current` to ConversationItem
+- Added `aria-label` to TreeVisualization ReactFlow container
+- Added `aria-label` to ConversationItem rename/delete buttons
+- Enter/Shift+Enter behavior on chat input was already correct from F-08
+- ConfirmDialog uses shadcn Dialog which already handles focus trapping
+
+### T-062: Final Integration Verification and Build Check
+- `npm run build` passes with zero errors
+- `npm test` passes: 121 tests across 13 test files
+- Updated ModelSelector test to match new T-060 behavior (providers shown but disabled instead of hidden)

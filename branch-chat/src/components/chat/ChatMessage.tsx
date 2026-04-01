@@ -5,9 +5,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Trash2Icon } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
 import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { TreeNode } from "@/types/tree";
 
 interface ChatMessageProps {
@@ -17,6 +19,7 @@ interface ChatMessageProps {
   activeChildId: string | null;
   isActive: boolean;
   onBranchClick: (nodeId: string) => void;
+  onDelete?: (nodeId: string) => void;
 }
 
 export default function ChatMessage({
@@ -26,8 +29,10 @@ export default function ChatMessage({
   activeChildId,
   isActive,
   onBranchClick,
+  onDelete,
 }: ChatMessageProps) {
   const [showBranchMenu, setShowBranchMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isUser = node.role === "user";
@@ -49,7 +54,7 @@ export default function ChatMessage({
 
   return (
     <div
-      className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+      className={`group flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
       <div
         className={`relative max-w-[80%] rounded-lg px-4 py-3 ${
@@ -139,7 +144,31 @@ export default function ChatMessage({
             )}
           </div>
         )}
+
+        {/* Delete button (visible on hover) */}
+        {onDelete && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="absolute -top-2 -right-2 hidden rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm transition-opacity group-hover:block"
+            title="Delete message and replies"
+          >
+            <Trash2Icon className="h-3 w-3" />
+          </button>
+        )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      {onDelete && (
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+          title="Delete message"
+          description="Delete this message and all replies? This cannot be undone."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => onDelete(node.id)}
+        />
+      )}
     </div>
   );
 }

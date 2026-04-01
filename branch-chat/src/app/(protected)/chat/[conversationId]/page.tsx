@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
 import { useActivePath } from "@/hooks/useActivePath";
-import { buildChildrenMap, findDeepestLeaf } from "@/lib/tree";
+import { buildChildrenMap, findDeepestLeaf, findDescendants } from "@/lib/tree";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import { MODELS } from "@/constants/models";
@@ -216,6 +216,41 @@ export default function ChatPage() {
     [childrenMap, dispatch]
   );
 
+  const handleDeleteNode = useCallback(
+    async (nodeId: string) => {
+      try {
+        const res = await fetch(
+          `/api/conversations/${conversationId}/nodes/${nodeId}`,
+          { method: "DELETE" }
+        );
+        if (!res.ok) {
+          const data = await res.json();
+          toast.error(data.error || "Failed to delete");
+          return;
+        }
+        const data = await res.json();
+        const deletedIds = [nodeId];
+        // Also remove descendants from state
+        const descendants = findDescendants(nodeId, childrenMap);
+        deletedIds.push(...descendants);
+        dispatch({ type: "REMOVE_NODES", payload: deletedIds });
+
+        // Navigate to parent or clear if root was deleted
+        if (data.newActiveNodeId) {
+          const leafId = findDeepestLeaf(data.newActiveNodeId, childrenMap);
+          dispatch({ type: "SET_ACTIVE_NODE", payload: leafId });
+          window.location.hash = leafId;
+        } else {
+          dispatch({ type: "SET_ACTIVE_NODE", payload: null });
+          window.location.hash = "";
+        }
+      } catch {
+        toast.error("Network error. Please try again.");
+      }
+    },
+    [conversationId, childrenMap, dispatch]
+  );
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-hidden">
@@ -224,6 +259,7 @@ export default function ChatPage() {
           childrenMap={childrenMap}
           nodesMap={state.nodes}
           onBranchNavigate={handleBranchNavigate}
+          onDeleteNode={handleDeleteNode}
           isLoading={uiState.isLoading}
         />
       </div>

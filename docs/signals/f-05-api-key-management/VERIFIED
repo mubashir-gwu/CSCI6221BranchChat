@@ -1,0 +1,7 @@
+Audit passed. No issues found.
+
+Both medium issues from cycle 1 have been resolved:
+1. GET route now has per-key error handling — corrupted keys return "[error]" mask instead of crashing the entire listing.
+2. ALLOWED_PROVIDERS duplication eliminated — route handler now imports API_KEY_PROVIDERS from the ApiKey model.
+
+All acceptance criteria for T-024, T-025, T-026, T-027 pass. Build succeeds. 39/39 tests pass.

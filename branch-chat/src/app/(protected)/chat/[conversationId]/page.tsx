@@ -161,6 +161,8 @@ export default function ChatPage() {
       dispatch({ type: "SET_ACTIVE_NODE", payload: tempId });
       uiDispatch({ type: "SET_LOADING", payload: true });
 
+      const retry = () => handleSend(content, provider, model);
+
       try {
         const res = await fetch("/api/llm/chat", {
           method: "POST",
@@ -178,10 +180,38 @@ export default function ChatPage() {
         dispatch({ type: "REMOVE_NODES", payload: [tempId] });
 
         if (!res.ok) {
-          const data = await res.json();
-          toast.error(data.error || "Failed to send message");
-          // Restore active node to what it was before
           dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
+
+          const status = res.status;
+          let errorMsg: string;
+          let showRetry = false;
+
+          if (status === 422) {
+            errorMsg = `No API key found for ${provider}. Add one in Settings.`;
+          } else if (status === 429) {
+            errorMsg = `Rate limited by ${provider}. Please try again in a moment.`;
+            showRetry = true;
+          } else if (status === 502) {
+            const data = await res.json().catch(() => null);
+            const serverMsg = data?.error ?? "";
+            errorMsg = serverMsg.toLowerCase().includes("invalid api key")
+              ? `Invalid API key for ${provider}. Check your key in Settings.`
+              : `${provider} API error. Please try again.`;
+          } else if (status === 504) {
+            errorMsg = "Request timed out. The model took too long to respond.";
+            showRetry = true;
+          } else {
+            const data = await res.json().catch(() => null);
+            errorMsg = data?.error || "Failed to send message";
+          }
+
+          if (showRetry) {
+            toast.error(errorMsg, {
+              action: { label: "Retry", onClick: retry },
+            });
+          } else {
+            toast.error(errorMsg);
+          }
           return;
         }
 
@@ -201,7 +231,10 @@ export default function ChatPage() {
       } catch {
         dispatch({ type: "REMOVE_NODES", payload: [tempId] });
         dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
-        toast.error("Network error. Please try again.");
+        toast.error(
+          "Network error. Please check your connection and try again.",
+          { action: { label: "Retry", onClick: retry } }
+        );
       } finally {
         uiDispatch({ type: "SET_LOADING", payload: false });
       }

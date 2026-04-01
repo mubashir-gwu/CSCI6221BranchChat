@@ -1,0 +1,2 @@
+export {};
+// Stub — database types

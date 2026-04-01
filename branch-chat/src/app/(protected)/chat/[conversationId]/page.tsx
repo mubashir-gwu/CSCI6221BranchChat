@@ -123,6 +123,20 @@ export default function ChatPage() {
 
   const handleSend = useCallback(
     async (content: string, provider: string, model: string) => {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticNode: TreeNode = {
+        id: tempId,
+        parentId: state.activeNodeId,
+        role: "user",
+        content,
+        provider: null,
+        model: null,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Show user message immediately
+      dispatch({ type: "ADD_NODES", payload: [optimisticNode] });
+      dispatch({ type: "SET_ACTIVE_NODE", payload: tempId });
       uiDispatch({ type: "SET_LOADING", payload: true });
 
       try {
@@ -138,9 +152,14 @@ export default function ChatPage() {
           }),
         });
 
+        // Remove optimistic node before adding real ones
+        dispatch({ type: "REMOVE_NODES", payload: [tempId] });
+
         if (!res.ok) {
           const data = await res.json();
           toast.error(data.error || "Failed to send message");
+          // Restore active node to what it was before
+          dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
           return;
         }
 
@@ -158,6 +177,8 @@ export default function ChatPage() {
           payload: { provider, model },
         });
       } catch {
+        dispatch({ type: "REMOVE_NODES", payload: [tempId] });
+        dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
         toast.error("Network error. Please try again.");
       } finally {
         uiDispatch({ type: "SET_LOADING", payload: false });

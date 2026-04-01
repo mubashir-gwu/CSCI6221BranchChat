@@ -1,0 +1,11 @@
+Audit cycle 1 found 2 medium issues that need fixing before proceeding:
+
+1. **ChatInput selection state not synced with prop changes**
+   - File: `src/components/chat/ChatInput.tsx`
+   - Issue: `useState` at lines 24-27 initializes `selection` from `defaultProvider`/`defaultModel` but never updates when these props change. After branch navigation or conversation switch, the ModelSelector shows stale provider/model.
+   - Fix: Add a `useEffect` that calls `setSelection({ provider: defaultProvider, model: defaultModel })` when `defaultProvider` or `defaultModel` change.
+
+2. **Gemini provider does not handle system role messages**
+   - File: `src/lib/providers/gemini.ts`
+   - Issue: Line 15 maps both `system` and `user` roles to `'user'`. System messages should be extracted and passed via `config.systemInstruction` in `ai.chats.create()`.
+   - Fix: Before building `history`, separate out messages with `role === 'system'`, join their content, and pass as `config: { systemInstruction: joinedSystemContent }` to `ai.chats.create()`. Map only non-system messages into `history`.

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { PROVIDERS } from "@/constants/providers";
 import BranchIndicator from "./BranchIndicator";
+import BranchMenu from "./BranchMenu";
 import type { TreeNode } from "@/types/tree";
 
 interface ChatMessageProps {
@@ -25,10 +27,25 @@ export default function ChatMessage({
   isActive,
   onBranchClick,
 }: ChatMessageProps) {
+  const [showBranchMenu, setShowBranchMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const isUser = node.role === "user";
   const provider = node.provider
     ? PROVIDERS[node.provider as keyof typeof PROVIDERS]
     : null;
+
+  // Close branch menu when clicking outside
+  useEffect(() => {
+    if (!showBranchMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowBranchMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showBranchMenu]);
 
   return (
     <div
@@ -99,14 +116,27 @@ export default function ChatMessage({
           </ReactMarkdown>
         </div>
 
-        {/* Branch indicator when node has multiple children */}
+        {/* Branch indicator + menu when node has multiple children */}
         {childCount > 1 && (
-          <div className="mt-2">
+          <div className="relative mt-2" ref={menuRef}>
             <BranchIndicator
               nodeId={node.id}
               branchCount={childCount}
-              onClick={() => onBranchClick(node.id)}
+              onClick={() => setShowBranchMenu((prev) => !prev)}
             />
+            {showBranchMenu && (
+              <div className="absolute left-0 z-50 mt-1">
+                <BranchMenu
+                  parentNodeId={node.id}
+                  children={childNodes}
+                  activeChildId={activeChildId}
+                  onSelect={(childId) => {
+                    setShowBranchMenu(false);
+                    onBranchClick(childId);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

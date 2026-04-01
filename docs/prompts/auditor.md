@@ -67,7 +67,7 @@ For each concern: current code, future need, compatibility assessment.
 ## Output
 
 ### Audit Report
-Write the full report to: `docs/audits/[feature-name]-audit-cycle-[N].md`
+Write the full report to: `docs/audits/[f-xx]-[feature-name]-audit-cycle-[N].md`
 
 Use this structure:
 ```markdown

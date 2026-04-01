@@ -9,6 +9,7 @@ import type { TreeNode, ChildrenMap } from "@/types/tree";
 interface ChatPanelProps {
   activePath: TreeNode[];
   childrenMap: ChildrenMap;
+  nodesMap: Map<string, TreeNode>;
   onBranchNavigate: (nodeId: string) => void;
   isLoading: boolean;
 }
@@ -16,6 +17,7 @@ interface ChatPanelProps {
 export default function ChatPanel({
   activePath,
   childrenMap,
+  nodesMap,
   onBranchNavigate,
   isLoading,
 }: ChatPanelProps) {
@@ -37,13 +39,20 @@ export default function ChatPanel({
   return (
     <ScrollArea className="h-full">
       <div className="mx-auto max-w-3xl px-4 py-6">
-        {activePath.map((node) => {
-          const children = childrenMap.get(node.id) ?? [];
+        {activePath.map((node, index) => {
+          const childIds = childrenMap.get(node.id) ?? [];
+          const childNodes = childIds
+            .map((id) => nodesMap.get(id))
+            .filter((n): n is TreeNode => n !== undefined);
+          const activeChildId =
+            index < activePath.length - 1 ? activePath[index + 1].id : null;
           return (
             <ChatMessage
               key={node.id}
               node={node}
-              childCount={children.length}
+              childCount={childIds.length}
+              childNodes={childNodes}
+              activeChildId={activeChildId}
               isActive={node.id === activePath[activePath.length - 1]?.id}
               onBranchClick={onBranchNavigate}
             />

@@ -221,6 +221,7 @@ export default function ChatPage() {
         <ChatPanel
           activePath={activePath}
           childrenMap={childrenMap}
+          nodesMap={state.nodes}
           onBranchNavigate={handleBranchNavigate}
           isLoading={uiState.isLoading}
         />

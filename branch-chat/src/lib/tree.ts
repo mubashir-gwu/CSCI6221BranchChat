@@ -32,6 +32,19 @@ export function buildChildrenMap(nodes: Map<string, TreeNode>): ChildrenMap {
   return childrenMap;
 }
 
+export function findDeepestLeaf(
+  nodeId: string,
+  childrenMap: ChildrenMap
+): string {
+  let current = nodeId;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const children = childrenMap.get(current) ?? [];
+    if (children.length === 0) return current;
+    current = children[0];
+  }
+}
+
 export function findDescendants(
   nodeId: string,
   childrenMap: ChildrenMap

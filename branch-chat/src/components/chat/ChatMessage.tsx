@@ -11,6 +11,8 @@ import type { TreeNode } from "@/types/tree";
 interface ChatMessageProps {
   node: TreeNode;
   childCount: number;
+  childNodes: TreeNode[];
+  activeChildId: string | null;
   isActive: boolean;
   onBranchClick: (nodeId: string) => void;
 }
@@ -18,6 +20,8 @@ interface ChatMessageProps {
 export default function ChatMessage({
   node,
   childCount,
+  childNodes,
+  activeChildId,
   isActive,
   onBranchClick,
 }: ChatMessageProps) {

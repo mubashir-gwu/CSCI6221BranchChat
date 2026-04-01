@@ -9,6 +9,7 @@ import { useActivePath } from "@/hooks/useActivePath";
 import { buildChildrenMap } from "@/lib/tree";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
+import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
 
@@ -95,13 +96,26 @@ export default function ChatPage() {
         const res = await fetch("/api/settings/api-keys");
         if (!res.ok) return;
         const data = await res.json();
-        setAvailableProviders(data.keys.map((k: { provider: string }) => k.provider));
+        const providers = data.keys.map((k: { provider: string }) => k.provider);
+        setAvailableProviders(providers);
+
+        // If current selected provider has no key, switch to first available
+        if (providers.length > 0 && !providers.includes(uiState.selectedProvider)) {
+          const firstProvider = providers[0] as keyof typeof MODELS;
+          const firstModel = MODELS[firstProvider]?.[0];
+          if (firstModel) {
+            uiDispatch({
+              type: "SET_SELECTED_MODEL",
+              payload: { provider: firstProvider, model: firstModel.id },
+            });
+          }
+        }
       } catch {
         // Silently fail
       }
     }
     fetchKeys();
-  }, []);
+  }, [uiState.selectedProvider, uiDispatch]);
 
   const childrenMap = useMemo(
     () => buildChildrenMap(state.nodes),
@@ -116,10 +130,16 @@ export default function ChatPage() {
     : null;
   const conversation = state.conversations.find((c) => c.id === conversationId);
 
+  const conversationProviderAvailable =
+    conversation?.defaultProvider && availableProviders.includes(conversation.defaultProvider);
   const defaultProvider =
-    activeNode?.provider ?? conversation?.defaultProvider ?? uiState.selectedProvider;
+    activeNode?.provider ??
+    (conversationProviderAvailable ? conversation.defaultProvider : null) ??
+    uiState.selectedProvider;
   const defaultModel =
-    activeNode?.model ?? conversation?.defaultModel ?? uiState.selectedModel;
+    activeNode?.model ??
+    (conversationProviderAvailable ? conversation.defaultModel : null) ??
+    uiState.selectedModel;
 
   const handleSend = useCallback(
     async (content: string, provider: string, model: string) => {

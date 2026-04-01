@@ -314,3 +314,46 @@
 ### Verification
 - `npm run build` passes with no errors
 - All 39 tests pass
+
+---
+
+## F-06: Core Tree Utilities
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-028: Implement Tree Path and Children Map Functions
+- `getPathToRoot` and `buildChildrenMap` were already implemented in `src/lib/tree.ts` during earlier scaffold/API work
+- Uses typed `TreeNode` and `ChildrenMap` from `src/types/tree.ts`
+- `getPathToRoot` walks parentId chain to root, reverses for root-first order
+- `buildChildrenMap` groups nodes by parentId into a Map
+- Build passes
+
+### T-029: Implement Find Descendants Function
+- `findDescendants` was already implemented in `src/lib/tree.ts`
+- Uses BFS via queue to collect all descendant node IDs (excluding the start node)
+- Returns empty array for leaf nodes
+- Build passes
+
+### T-030: Implement Token Estimator
+- Implemented `estimateTokens` and `estimateTokensForMessage` in `src/lib/tokenEstimator.ts`
+- Formula: `Math.ceil(content.length / 4) + 4` per message (4 chars ≈ 1 token + 4 overhead)
+- Build passes
+
+### T-031: Write Tests for Tree Utilities and Token Estimator
+- Created `__tests__/lib/tree.test.ts` with 15 tests covering:
+  - `getPathToRoot`: linear chain, root node, missing node, branching tree
+  - `buildChildrenMap`: linear, branching, single-node, empty map
+  - `findDescendants`: leaf, linear chain, branching tree, subtree, exclusion of self, unknown node
+- Created `__tests__/lib/tokenEstimator.test.ts` with 6 tests covering:
+  - Single message estimation (short, empty, long)
+  - Multiple messages, empty array, varying lengths
+- All 21 new tests pass (60 total across project)
+
+### Workarounds & Known Issues
+- None
+
+### Verification
+- `npm run build` passes with no errors
+- `npm run dev` starts on localhost:3000
+- All tests pass

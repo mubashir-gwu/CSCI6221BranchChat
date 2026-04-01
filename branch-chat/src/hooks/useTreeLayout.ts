@@ -63,6 +63,7 @@ export function useTreeLayout(
     const rfEdges: { id: string; source: string; target: string; type: string }[] = [];
     for (const [parentId, children] of childrenMap) {
       for (const childId of children) {
+        if (!nodes.has(parentId) || !nodes.has(childId)) continue;
         rfEdges.push({
           id: `${parentId}-${childId}`,
           source: parentId,

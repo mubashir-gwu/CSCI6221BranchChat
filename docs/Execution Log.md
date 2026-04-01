@@ -585,3 +585,10 @@ Updated the Gemini model entry in:
 - Fix 2: `useTreeLayout.ts` — added guard `nodes.has(parentId) && nodes.has(childId)` before `graph.setEdge()` to prevent dangling edges
 - `npm run build` passes after fixes
 - No new concerns noticed
+
+### Audit Cycle 2 Fixes
+- **Date:** 2026-04-01
+- 1/1 fix applied successfully from `docs/signals/f-10-tree-visualization/REQUIRES_REVISION`
+- Fix 1: `useTreeLayout.ts` — added missing `nodes.has()` guard to rfEdges loop (lines 64-72), matching the guard already present in the Dagre edge loop
+- `npm run build` passes after fix
+- No new concerns noticed

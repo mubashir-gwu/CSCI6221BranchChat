@@ -490,3 +490,38 @@ Updated the Gemini model entry in:
 ### Workaround / Notes
 - The audit report for F-04 (`docs/audits/f-04-*-audit-cycle-1.md`) references the old model name in a passing note; left as-is since it reflects what was true at audit time.
 - If Google deprecates this model in the future, update the `gemini` array in `src/constants/models.ts` again.
+
+## F-09: Tree Branching & Navigation
+
+**Status:** Complete  
+**Date:** 2026-04-01
+
+### T-044: Implement Branch Creation Flow
+- Deliberation conducted and saved to `branch-chat/docs/decisions/tree-branching/T-044-*`
+- Added `findDeepestLeaf` utility to `src/lib/tree.ts` for navigating to branch endpoints
+- Updated `ChatPanel` to accept `nodesMap` and pass resolved child nodes + active child ID to `ChatMessage`
+- Updated `page.tsx` to pass `nodesMap` through to ChatPanel
+- Branch creation already worked via existing `handleSend` flow (uses `activeNodeId` as `parentNodeId`)
+
+### T-045: Implement BranchIndicator Integration
+- `BranchIndicator` component already existed from F-08
+- Updated `ChatMessage` to toggle a `BranchMenu` popup when indicator is clicked
+- Added click-outside handler to close the menu
+- Branch menu shows all children of the branch point with content previews
+
+### T-046: Implement BranchMenu Sibling Navigation
+- Updated `handleBranchNavigate` in `page.tsx` to use `findDeepestLeaf`
+- Selecting a branch from the menu navigates to the deepest leaf of that subtree
+- Active branch is highlighted in the menu via `activeChildId`
+
+### T-047: Implement Node Deletion from Chat
+- Added delete button (Trash2 icon) to `ChatMessage`, visible on hover via Tailwind `group-hover`
+- `ConfirmDialog` shown before deletion with destructive styling
+- `handleDeleteNode` in `page.tsx` calls `DELETE /api/conversations/:id/nodes/:nodeId`
+- On success: removes deleted node + all descendants from state, navigates to parent's deepest leaf
+- Handles edge case of deleting root (clears active node)
+
+### T-048: Write Tests for Branching Components
+- Created `__tests__/components/BranchIndicator.test.tsx` (4 tests): badge rendering, click callback, correct count
+- Created `__tests__/components/ChatPanel.test.tsx` (5 tests): empty state, message rendering, branch indicator visibility, loading state
+- All 91 tests pass across the full suite

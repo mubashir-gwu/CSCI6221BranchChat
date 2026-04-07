@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import ThemeToggle from "@/components/common/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import ConversationProvider from "@/components/providers/ConversationProvider";
 import UIProvider from "@/components/providers/UIProvider";
@@ -19,6 +20,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         <aside className="flex w-64 flex-col border-r bg-muted/30">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <Link href="/dashboard" className="text-lg font-semibold hover:opacity-80">BranchChat</Link>
+            <ThemeToggle />
           </div>
           <div className="flex-1 overflow-hidden">
             <ConversationList />

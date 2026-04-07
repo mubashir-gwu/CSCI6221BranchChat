@@ -201,6 +201,18 @@ export default function ChatPage() {
           type: "SET_SELECTED_MODEL",
           payload: { provider, model },
         });
+
+        // After first message, re-fetch conversations to pick up auto-generated title
+        if (state.activeNodeId === null) {
+          fetch("/api/conversations")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data?.conversations) {
+                dispatch({ type: "SET_CONVERSATIONS", payload: data.conversations });
+              }
+            })
+            .catch(() => {});
+        }
       } catch {
         dispatch({ type: "REMOVE_NODES", payload: [tempId] });
         dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });

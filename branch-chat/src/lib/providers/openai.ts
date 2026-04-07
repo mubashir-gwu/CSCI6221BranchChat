@@ -7,9 +7,8 @@ export const openaiProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
-    apiKey: string,
   ): Promise<LLMResponse> {
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const response = await client.chat.completions.create({
       model,
@@ -23,6 +22,8 @@ export const openaiProvider: LLMProvider = {
       content: response.choices[0].message.content ?? '',
       provider: 'openai',
       model,
+      inputTokens: response.usage?.prompt_tokens ?? 0,
+      outputTokens: response.usage?.completion_tokens ?? 0,
     };
   },
 };

@@ -19,10 +19,18 @@ export const mockProvider: LLMProvider = {
     model: string,
   ): Promise<LLMResponse> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const inputTokens = Math.ceil(
+      _messages.reduce((sum, m) => sum + m.content.length, 0) / 4
+    );
+    const outputTokens = Math.ceil(MOCK_RESPONSE.length / 4);
+
     return {
       content: MOCK_RESPONSE,
       provider: 'mock',
       model,
+      inputTokens,
+      outputTokens,
     };
   },
 };

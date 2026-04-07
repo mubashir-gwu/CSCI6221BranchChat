@@ -7,9 +7,8 @@ export const anthropicProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
-    apiKey: string,
   ): Promise<LLMResponse> {
-    const client = new Anthropic({ apiKey });
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const systemMessages = messages.filter((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
@@ -33,6 +32,8 @@ export const anthropicProvider: LLMProvider = {
       content,
       provider: 'anthropic',
       model,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
     };
   },
 };

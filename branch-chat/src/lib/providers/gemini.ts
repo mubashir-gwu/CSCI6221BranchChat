@@ -7,9 +7,8 @@ export const geminiProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
-    apiKey: string,
   ): Promise<LLMResponse> {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     const systemMessages = messages.filter((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
@@ -36,6 +35,8 @@ export const geminiProvider: LLMProvider = {
       content: response.text ?? '',
       provider: 'gemini',
       model,
+      inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
+      outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
     };
   },
 };

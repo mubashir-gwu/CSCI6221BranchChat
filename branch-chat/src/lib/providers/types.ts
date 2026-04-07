@@ -7,6 +7,8 @@ export interface LLMResponse {
   content: string;
   model: string;
   provider: string;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface LLMProvider {
@@ -14,6 +16,5 @@ export interface LLMProvider {
   sendMessage(
     messages: LLMMessage[],
     model: string,
-    apiKey: string,
   ): Promise<LLMResponse>;
 }

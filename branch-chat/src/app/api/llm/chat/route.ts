@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
     // Call LLM provider
     try {
-      const llmResponse = await getProvider(provider).sendMessage(messages, model, apiKey);
+      const llmResponse = await getProvider(provider).sendMessage(messages, model);
 
       // Insert assistant node
       const assistantNode = await Node.create({

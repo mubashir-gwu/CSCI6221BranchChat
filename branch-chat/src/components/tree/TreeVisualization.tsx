@@ -26,6 +26,8 @@ export default function TreeVisualization({
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
+      const data = node.data as { role?: string };
+      if (data.role === 'user') return;
       onNodeClick(node.id);
     },
     [onNodeClick]

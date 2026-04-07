@@ -13,6 +13,7 @@ export const config = {
     '/api/settings/:path*',
     '/api/import/:path*',
     '/api/providers/:path*',
+    '/api/token-usage/:path*',
     '/usage',
   ],
 };

@@ -37,6 +37,16 @@ export default function ModelSelector({
   const isProviderEnabled = (key: string) =>
     key === "mock" || availableProviders.includes(key);
 
+  // No providers available — show disabled state
+  if (availableProviders.length === 0) {
+    return (
+      <Button variant="outline" size="sm" className="gap-1.5 text-xs" disabled>
+        <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground" />
+        <span>No providers available</span>
+      </Button>
+    );
+  }
+
   // Find display info for current selection
   const currentProvider = PROVIDERS[value.provider as keyof typeof PROVIDERS];
   const currentModels = MODELS[value.provider as keyof typeof MODELS];

@@ -838,3 +838,20 @@ Updated the Gemini model entry in:
 - Created `providers.test.ts` — 3 tests for providers API
 - Updated `ModelSelector.test.tsx` — updated "(no key)" → "(not available)", added availability gating tests
 - All 142 tests pass (16 files), build passes
+
+## F-17: Server-Level API Keys — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### Fixes Applied (3/3)
+
+1. **ModelSelector: "No providers available" disabled state** — Added early return when `availableProviders.length === 0` that renders a disabled button with "No providers available" text instead of showing stale hardcoded values.
+
+2. **UIProvider: Clear selected model when no providers available** — Added `else` branch in `refreshProviders` to dispatch `SET_SELECTED_MODEL` with empty strings (`provider: "", model: ""`) when `providers.length === 0`.
+
+3. **ChatInput: Disable send when provider unavailable** — Added `isProviderUnavailable` check (empty provider or not in `availableProviders`). Applied to both `handleSend` guard and send button `disabled` prop.
+
+### Verification
+- `npm run build` passes
+- No new concerns noticed

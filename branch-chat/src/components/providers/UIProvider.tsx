@@ -73,6 +73,11 @@ export default function UIProvider({
             payload: { provider: firstProvider, model: firstModel.id },
           });
         }
+      } else if (providers.length === 0) {
+        dispatch({
+          type: "SET_SELECTED_MODEL",
+          payload: { provider: "", model: "" },
+        });
       }
     } catch {
       // Silently fail

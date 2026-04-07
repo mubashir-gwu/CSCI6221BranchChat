@@ -30,12 +30,15 @@ export default function ChatInput({
     setSelection({ provider: defaultProvider, model: defaultModel });
   }, [defaultProvider, defaultModel]);
 
+  const isProviderUnavailable =
+    !selection.provider || !availableProviders.includes(selection.provider);
+
   const handleSend = useCallback(() => {
     const trimmed = message.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || isProviderUnavailable) return;
     onSend(trimmed, selection.provider, selection.model);
     setMessage("");
-  }, [message, disabled, onSend, selection]);
+  }, [message, disabled, isProviderUnavailable, onSend, selection]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -60,7 +63,7 @@ export default function ChatInput({
         <Button
           size="icon"
           onClick={handleSend}
-          disabled={disabled || !message.trim()}
+          disabled={disabled || !message.trim() || isProviderUnavailable}
           aria-label="Send message"
         >
           <SendIcon className="h-4 w-4" />

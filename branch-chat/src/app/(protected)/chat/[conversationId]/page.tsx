@@ -313,6 +313,7 @@ export default function ChatPage() {
             childrenMap={childrenMap}
             nodesMap={state.nodes}
             onBranchNavigate={handleBranchNavigate}
+            onNavigateToNode={handleTreeNodeClick}
             onDeleteNode={handleDeleteNode}
             isLoading={uiState.isLoading}
           />

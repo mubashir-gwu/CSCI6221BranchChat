@@ -8,6 +8,7 @@ interface BranchMenuProps {
   children: TreeNode[];
   activeChildId: string | null;
   onSelect: (nodeId: string) => void;
+  onNavigateToNode?: (nodeId: string) => void;
 }
 
 export default function BranchMenu({
@@ -15,6 +16,7 @@ export default function BranchMenu({
   children,
   activeChildId,
   onSelect,
+  onNavigateToNode,
 }: BranchMenuProps) {
   return (
     <div className="rounded-lg border bg-popover p-2 shadow-md" role="menu" aria-label="Branch options">
@@ -53,6 +55,18 @@ export default function BranchMenu({
           );
         })}
       </div>
+      {onNavigateToNode && (
+        <>
+          <div className="my-2 border-t" />
+          <button
+            role="menuitem"
+            onClick={() => onNavigateToNode(parentNodeId)}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            + New branch from here
+          </button>
+        </>
+      )}
     </div>
   );
 }

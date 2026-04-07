@@ -11,6 +11,7 @@ interface ChatPanelProps {
   childrenMap: ChildrenMap;
   nodesMap: Map<string, TreeNode>;
   onBranchNavigate: (nodeId: string) => void;
+  onNavigateToNode?: (nodeId: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   isLoading: boolean;
 }
@@ -20,6 +21,7 @@ export default function ChatPanel({
   childrenMap,
   nodesMap,
   onBranchNavigate,
+  onNavigateToNode,
   onDeleteNode,
   isLoading,
 }: ChatPanelProps) {
@@ -57,6 +59,7 @@ export default function ChatPanel({
               activeChildId={activeChildId}
               isActive={node.id === activePath[activePath.length - 1]?.id}
               onBranchClick={onBranchNavigate}
+              onNavigateToNode={onNavigateToNode}
               onDelete={onDeleteNode}
             />
           );

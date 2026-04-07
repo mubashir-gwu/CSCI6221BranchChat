@@ -19,6 +19,7 @@ interface ChatMessageProps {
   activeChildId: string | null;
   isActive: boolean;
   onBranchClick: (nodeId: string) => void;
+  onNavigateToNode?: (nodeId: string) => void;
   onDelete?: (nodeId: string) => void;
 }
 
@@ -29,6 +30,7 @@ export default function ChatMessage({
   activeChildId,
   isActive,
   onBranchClick,
+  onNavigateToNode,
   onDelete,
 }: ChatMessageProps) {
   const [showBranchMenu, setShowBranchMenu] = useState(false);
@@ -139,6 +141,10 @@ export default function ChatMessage({
                     setShowBranchMenu(false);
                     onBranchClick(childId);
                   }}
+                  onNavigateToNode={onNavigateToNode ? (nodeId) => {
+                    setShowBranchMenu(false);
+                    onNavigateToNode(nodeId);
+                  } : undefined}
                 />
               </div>
             )}

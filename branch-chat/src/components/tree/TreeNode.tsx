@@ -38,7 +38,7 @@ function TreeNodeComponent({ data }: { data: TreeNodeData }) {
         borderLeftWidth: '3px',
       }}
     >
-      <Handle type="target" position={Position.Top} className="bg-muted-foreground! w-2! h-2!" />
+      <Handle type="target" position={Position.Top} className="h-0! w-0! min-h-0! min-w-0! border-0! bg-transparent!" />
 
       <div className="flex items-center gap-1.5">
         <div
@@ -55,7 +55,7 @@ function TreeNodeComponent({ data }: { data: TreeNodeData }) {
         )}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="bg-muted-foreground! w-2! h-2!" />
+      <Handle type="source" position={Position.Bottom} className="h-0! w-0! min-h-0! min-w-0! border-0! bg-transparent!" />
     </div>
   );
 }

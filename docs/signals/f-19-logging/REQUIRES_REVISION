@@ -1,14 +1,1 @@
-1. File: `src/lib/logger.ts`, line 44 — Replace `fs.appendFileSync` with `fs.promises.appendFile`. Make `writeLog` async. The exported convenience methods (trace/debug/info/warn/error) should call the async `writeLog` fire-and-forget (no await needed at call sites). Also update `ensureLogDir` to use `fs.promises.mkdir`. Update tests in `__tests__/lib/logger.test.ts` if needed to account for async writes (e.g., flush/await before reading log file).
-
-2. Files: All 9 authenticated API routes — Move `logger.info('Route entered', ...)` to BEFORE the auth check. Since `userId` is not yet available, log without it. After the `if (!session?.user?.id)` check fails, add `logger.warn('Unauthorized request', { context: { route, method, requestId } })` before returning 401. Routes to update:
-   - `src/app/api/conversations/route.ts` (both GET and POST)
-   - `src/app/api/conversations/[id]/route.ts` (both PATCH and DELETE)
-   - `src/app/api/conversations/[id]/nodes/route.ts` (GET)
-   - `src/app/api/conversations/[id]/nodes/[nodeId]/route.ts` (DELETE)
-   - `src/app/api/conversations/[id]/export/route.ts` (GET)
-   - `src/app/api/llm/chat/route.ts` (POST)
-   - `src/app/api/import/route.ts` (POST)
-   - `src/app/api/providers/route.ts` (GET)
-   - `src/app/api/token-usage/route.ts` (GET)
-
-3. File: `src/app/api/providers/route.ts` — Wrap the route body (after auth check) in a try/catch block. Add `logger.error('Route error', { context: { route, method: 'GET', userId: session.user.id, requestId }, error: err?.message, stack: err?.stack })` in the catch, and return `{ error: 'Internal server error' }` with status 500. Follow the same pattern as other routes.
+1. File: `src/lib/logger.ts` — The async fire-and-forget `writeLog` calls race against each other, causing non-deterministic write ordering. Add a write queue that serializes appends: each `writeLog` call should chain onto the previous promise so writes complete in call order. For example, maintain a module-level `let writeChain = Promise.resolve()` and in `writeLog`, do `writeChain = writeChain.then(() => doWrite(...))`. This preserves fire-and-forget semantics at call sites while guaranteeing ordering. The test `supports all log levels` in `__tests__/lib/logger.test.ts` currently fails due to this — it should pass after the fix without test changes.

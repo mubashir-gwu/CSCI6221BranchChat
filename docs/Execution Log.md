@@ -870,3 +870,37 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - No new concerns noticed
+
+---
+
+## F-18: Auto-Title Conversations
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-087: Implement Auto-Title Logic in LLM Chat Route
+- Added `generateTitle()` helper function in `src/app/api/llm/chat/route.ts`
+- Uses same provider/model as the chat message to generate a concise title (max 6 words)
+- Fire-and-forget pattern: title generation does not block the HTTP response
+- Title truncated to 200 characters
+- Token usage tracked for the title generation call
+- On failure, error is silently caught — conversation keeps "New Conversation"
+- Triggers when `conversation.title === "New Conversation"`
+
+### T-088: Update Client to Reflect Auto-Generated Titles
+- After first message response (detected by `state.activeNodeId === null`), re-fetches conversation list
+- No `setTimeout` or polling — just a single fetch after the response
+- If title generation hasn't completed server-side yet, title updates on next natural re-fetch
+
+### T-089: Write Tests for Auto-Title
+- Added 5 tests to `__tests__/api/llm-chat.test.ts`:
+  - Title generation triggers when title is "New Conversation"
+  - Title generation does NOT trigger for existing titles
+  - Main response unaffected by title generation failure
+  - Token usage tracked for title generation call
+  - Title truncated to 200 characters
+- All 23 tests pass
+
+### Verification
+- `npm run build` passes
+- `npm test` — all tests pass

@@ -130,3 +130,24 @@
     @apply font-sans;
     }
 }
+
+/* ReactFlow Controls dark mode overrides */
+.dark .react-flow__controls {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .react-flow__controls button {
+  background: var(--card);
+  border-color: var(--border);
+  fill: var(--foreground);
+  color: var(--foreground);
+}
+
+.dark .react-flow__controls button:hover {
+  background: var(--accent);
+}
+
+.dark .react-flow__controls button svg {
+  fill: var(--foreground);
+}

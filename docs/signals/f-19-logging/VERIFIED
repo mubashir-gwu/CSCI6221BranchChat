@@ -1,0 +1,6 @@
+Audit passed. No critical or medium issues found.
+
+Low-severity notes:
+1. Logger uses synchronous fs.appendFileSync (spec allows either sync or async — acceptable for course project).
+2. Unauthenticated requests are not logged in most routes (acceptable — avoids noise).
+3. Providers route lacks try/catch error logging (low risk — getAvailableProviders() is unlikely to throw).

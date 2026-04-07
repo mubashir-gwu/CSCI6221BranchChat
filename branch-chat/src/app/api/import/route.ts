@@ -3,8 +3,10 @@ import { Types } from "mongoose";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { validateTreeIntegrity } from "@/lib/tree";
+import { getAvailableProviders, isProviderAvailable } from "@/lib/providers/availability";
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
+import { MODELS } from "@/constants/models";
 import type { ExportedTree } from "@/types/export";
 
 export async function POST(request: NextRequest) {
@@ -69,12 +71,25 @@ export async function POST(request: NextRequest) {
     const rootNode = jsonData.nodes.find((n) => n.parentId === null)!;
     const newRootId = idMap.get(rootNode.id)!;
 
+    // Determine default provider — fall back if unavailable
+    let defaultProvider = "openai";
+    let defaultModel = "gpt-4o";
+
+    if (!isProviderAvailable(defaultProvider)) {
+      const available = getAvailableProviders();
+      if (available.length > 0) {
+        defaultProvider = available[0];
+        const providerModels = MODELS[defaultProvider as keyof typeof MODELS];
+        defaultModel = providerModels?.[0]?.id ?? defaultModel;
+      }
+    }
+
     // Create new conversation
     const conversation = await Conversation.create({
       userId: session.user.id,
       title: jsonData.title || "Imported Conversation",
-      defaultProvider: "openai",
-      defaultModel: "gpt-4o",
+      defaultProvider,
+      defaultModel,
       rootNodeId: newRootId,
     });
 

@@ -8,6 +8,7 @@ const initialState: UIState = {
   isLoading: false,
   isSidebarOpen: true,
   isTreeOpen: false,
+  isMinimapVisible: true,
   selectedProvider: "openai",
   selectedModel: "gpt-4o",
   availableProviders: [],
@@ -33,6 +34,9 @@ function uiReducer(state: UIState, action: UIAction): UIState {
 
     case "SET_AVAILABLE_PROVIDERS":
       return { ...state, availableProviders: action.payload };
+
+    case "TOGGLE_MINIMAP":
+      return { ...state, isMinimapVisible: !state.isMinimapVisible };
 
     default:
       return state;

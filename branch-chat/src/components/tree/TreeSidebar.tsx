@@ -1,7 +1,8 @@
 'use client';
 
-import { PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { PanelRightOpen, PanelRightClose, Eye, EyeOff } from 'lucide-react';
 import TreeVisualization from './TreeVisualization';
+import { useUI } from '@/hooks/useUI';
 import type { TreeNode } from '@/types/tree';
 import type { ChildrenMap } from '@/types/tree';
 
@@ -22,6 +23,8 @@ export default function TreeSidebar({
   activeNodeId,
   onNodeClick,
 }: TreeSidebarProps) {
+  const { isMinimapVisible, toggleMinimap } = useUI();
+
   return (
     <div className="relative flex h-full">
       <button
@@ -34,8 +37,15 @@ export default function TreeSidebar({
 
       {isOpen && (
         <div className="h-full w-80 border-l bg-card">
-          <div className="flex h-10 items-center border-b px-3">
+          <div className="flex h-10 items-center justify-between border-b px-3">
             <span className="text-sm font-medium">Tree View</span>
+            <button
+              onClick={toggleMinimap}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              aria-label={isMinimapVisible ? 'Hide minimap' : 'Show minimap'}
+            >
+              {isMinimapVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </button>
           </div>
           <div className="h-[calc(100%-2.5rem)]">
             <TreeVisualization

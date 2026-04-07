@@ -4,6 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { ReactFlow, Controls, MiniMap, type NodeMouseHandler } from '@xyflow/react';
 import TreeNodeComponent from './TreeNode';
 import { useTreeLayout } from '@/hooks/useTreeLayout';
+import { useUI } from '@/hooks/useUI';
 import type { TreeNode } from '@/types/tree';
 import type { ChildrenMap } from '@/types/tree';
 
@@ -23,6 +24,7 @@ export default function TreeVisualization({
   onNodeClick,
 }: TreeVisualizationProps) {
   const { rfNodes, rfEdges } = useTreeLayout(nodes, childrenMap, activeNodeId);
+  const { isMinimapVisible } = useUI();
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -61,16 +63,18 @@ export default function TreeVisualization({
       aria-label="Conversation tree visualization"
     >
       <Controls showInteractive={false} />
-      <MiniMap
-        nodeStrokeWidth={3}
-        nodeColor={(node) => {
-          const data = node.data as { isActive?: boolean; role?: string };
-          if (data.isActive) return 'var(--color-primary)';
-          if (data.role === 'user') return '#6B7280';
-          return 'var(--color-border)';
-        }}
-        className="bg-card"
-      />
+      {isMinimapVisible && (
+        <MiniMap
+          nodeStrokeWidth={3}
+          nodeColor={(node) => {
+            const data = node.data as { isActive?: boolean; role?: string };
+            if (data.isActive) return 'var(--color-primary)';
+            if (data.role === 'user') return '#6B7280';
+            return 'var(--color-border)';
+          }}
+          className="bg-card"
+        />
+      )}
     </ReactFlow>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useCallback } from "react";
 import { UIContext } from "@/contexts/UIContext";
 
 export function useUI() {
@@ -8,5 +8,14 @@ export function useUI() {
   if (!context) {
     throw new Error("useUI must be used within UIProvider");
   }
-  return context;
+
+  const toggleMinimap = useCallback(() => {
+    context.dispatch({ type: "TOGGLE_MINIMAP" });
+  }, [context.dispatch]);
+
+  return {
+    ...context,
+    isMinimapVisible: context.state.isMinimapVisible,
+    toggleMinimap,
+  };
 }

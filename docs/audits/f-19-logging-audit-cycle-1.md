@@ -75,21 +75,20 @@ All tests use temp directories to avoid polluting the real `logs/` directory, as
 
 ## Bug Detection
 
-### No critical or medium bugs found.
+1. **File: `src/lib/logger.ts`, line 44 — Synchronous file I/O blocks event loop**
+   - `fs.appendFileSync` is used instead of `fs.promises.appendFile`. Synchronous I/O blocks the Node.js event loop on every log call, which degrades request throughput under load.
+   - **Fix:** Replace `fs.appendFileSync` with `fs.promises.appendFile` (make `writeLog` async). The exported convenience methods should call the async version fire-and-forget (no need to await logging).
+   - **Severity:** Medium
 
-**Low-severity observations:**
-
-1. **File: `src/lib/logger.ts`, line 44 — Synchronous file I/O**
-   - `fs.appendFileSync` is used instead of `fs.promises.appendFile`. The spec says "Simple append-to-file using `fs.appendFileSync` or async `fs.promises.appendFile`" so either is acceptable. However, synchronous I/O blocks the event loop on each log call. For a course project this is fine, but noted for awareness.
-   - **Severity:** Low
-
-2. **File: `src/app/api/conversations/route.ts`, lines 14–16 — Entry log after auth check for GET**
-   - The `Route entered` log is placed after the auth check (line 19), meaning unauthenticated requests to GET won't be logged. This is consistent across most routes (POST in conversations also does this). The register route logs before auth (since it's public). This is acceptable behavior — logging only authenticated requests avoids noise from bots/scanners.
-   - **Severity:** Low (acceptable pattern)
+2. **Files: `src/app/api/conversations/route.ts`, `src/app/api/conversations/[id]/route.ts`, `src/app/api/conversations/[id]/nodes/route.ts`, `src/app/api/conversations/[id]/nodes/[nodeId]/route.ts`, `src/app/api/conversations/[id]/export/route.ts`, `src/app/api/llm/chat/route.ts`, `src/app/api/import/route.ts`, `src/app/api/providers/route.ts`, `src/app/api/token-usage/route.ts` — Unauthenticated requests not logged**
+   - In all authenticated routes, the "Route entered" log is placed after the auth check. Unauthenticated requests (401s) are silently dropped with no log trail. This is a security visibility gap — failed auth attempts against protected endpoints should be logged for intrusion detection.
+   - **Fix:** Move the `logger.info('Route entered', ...)` call to before the auth check in every route. For routes where `userId` is not yet available, log without it. After the auth check fails, log a warning: `logger.warn('Unauthorized request', { context: { route, method, requestId } })` before returning 401.
+   - **Severity:** Medium
 
 3. **File: `src/app/api/providers/route.ts` — No try/catch error logging**
-   - The providers route has no try/catch block. If `getAvailableProviders()` throws, the error won't be caught and logged. Given that `getAvailableProviders()` is a simple env-var check unlikely to throw, this is low risk.
-   - **Severity:** Low
+   - The providers route has no try/catch block. If `getAvailableProviders()` throws an unexpected error, it will bubble up as an unhandled exception with no log entry, making debugging impossible.
+   - **Fix:** Wrap the body in a try/catch and add `logger.error('Route error', ...)` in the catch block, consistent with all other routes.
+   - **Severity:** Medium
 
 ## Security
 
@@ -124,6 +123,6 @@ The `extra` parameter pattern (accepting `Record<string, unknown>`) is flexible 
 
 ## Summary
 - Critical issues: 0
-- Medium issues: 0
-- Low issues: 3
-- Recommendation: **PROCEED**
+- Medium issues: 3
+- Low issues: 0
+- Recommendation: **FIX FIRST**

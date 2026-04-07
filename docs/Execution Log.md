@@ -686,3 +686,29 @@ Updated the Gemini model entry in:
 2. **Stale test "should preserve user node on LLM failure for retry"** — `__tests__/api/llm-chat.test.ts`: Renamed to "should delete user node on LLM failure to prevent orphans" and added assertion that `mockNodeDeleteOne` was called with the user node's `_id`.
 
 **Build:** passes. **Tests:** 16/16 pass.
+
+## F-14: UI Fixes & Polish
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-065: Make Only Assistant Nodes Clickable in Tree View
+- Updated `TreeVisualization.tsx` `onNodeClick` handler to ignore clicks on user nodes (`data.role === 'user'`)
+- Updated `TreeNode.tsx` to apply `cursor-default` on user nodes and `cursor-pointer hover:border-primary/50` on assistant nodes
+
+### T-066: Scope Delete Button to User Messages Only
+- Updated `ChatMessage.tsx` to conditionally render delete button and confirm dialog only when `isUser` is true
+
+### T-067: Change Delete Button to Muted Red
+- Changed delete button styling from `bg-destructive text-destructive-foreground` to `text-red-400/70` with `hover:text-red-500` transition
+
+### T-068: Fix Error Toast Icon
+- Updated `ToastProvider.tsx` to pass `icons={{ error: <AlertTriangle /> }}` to sonner `<Toaster>` component
+
+### T-069: Remove ReactFlow Connection Handles from Tree Nodes
+- Made `<Handle>` elements invisible via zero-size Tailwind classes while keeping them in DOM for edge rendering
+
+### T-070: Write/Update Tests for UI Fixes
+- Added test: user node click does NOT call `onNodeClick` in `TreeVisualization.test.tsx`
+- Added test: delete button renders for user messages only in `ChatPanel.test.tsx`
+- All 124 tests pass, build passes

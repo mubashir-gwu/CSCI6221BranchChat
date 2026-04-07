@@ -904,3 +904,37 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - `npm test` — all tests pass
+
+---
+
+## F-19: File-Based Logging
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-090: Create Logger Module and Configure Log Directory
+- Created `src/lib/logger.ts` with structured JSON logger
+- Log levels: TRACE, DEBUG, INFO, WARN, ERROR (configurable via `LOG_LEVEL` env var)
+- Writes JSON lines to `logs/app.log`, auto-creates `logs/` directory
+- Added `logs/` to `.gitignore`
+- `.env.example` already had `LOG_LEVEL=INFO`
+
+### T-091: Add Logging to API Routes
+- Instrumented all 10 API route files with entry/exit/error logging
+- Each route generates a `requestId` via `crypto.randomUUID()` for correlation
+- LLM chat route has detailed logging: LLM call started/completed with provider, model, token counts, duration
+- All log entries include userId and requestId in context
+
+### T-092: Add Logging to Auth, Database, and Auto-Title
+- Auth: login attempt, success, and failure (with reason) logged in CredentialsProvider
+- Database: connection attempt (with masked URI), success, and failure logged
+- Auto-title: generation start, success (with title), and failure logged
+
+### T-093: Write Tests for Logger Module
+- Created `__tests__/lib/logger.test.ts` with 7 tests
+- Tests: JSON line writing, context inclusion, extra fields, log level filtering, directory creation, field validation, all log levels
+- Uses temp directories to avoid polluting real logs
+
+### Verification
+- `npm run build` passes
+- `npm test` — all tests pass

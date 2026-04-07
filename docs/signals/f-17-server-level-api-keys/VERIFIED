@@ -1,0 +1,4 @@
+Audit passed. No critical or medium issues found.
+
+Low-severity note:
+- ModelSelector (src/components/chat/ModelSelector.tsx) does not display an explicit "No providers available" message when availableProviders is empty. All providers render as disabled, which is functionally correct but lacks the specific message text from T-082. This is cosmetic and does not affect functionality.

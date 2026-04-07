@@ -145,19 +145,17 @@ export async function POST(request: Request) {
 
       // Track token usage (non-blocking)
       try {
-        if (llmResponse.inputTokens || llmResponse.outputTokens) {
-          await TokenUsage.findOneAndUpdate(
-            { userId: session.user.id, provider },
-            {
-              $inc: {
-                inputTokens: llmResponse.inputTokens || 0,
-                outputTokens: llmResponse.outputTokens || 0,
-                callCount: 1,
-              },
+        await TokenUsage.findOneAndUpdate(
+          { userId: session.user.id, provider },
+          {
+            $inc: {
+              inputTokens: llmResponse.inputTokens ?? 0,
+              outputTokens: llmResponse.outputTokens ?? 0,
+              callCount: 1,
             },
-            { upsert: true }
-          );
-        }
+          },
+          { upsert: true }
+        );
       } catch {
         // Token tracking failure should not break the chat response
       }

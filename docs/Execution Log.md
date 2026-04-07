@@ -855,3 +855,18 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - No new concerns noticed
+
+---
+
+## F-17: Server-Level API Keys — Audit Cycle 2 Fix
+
+**Status:** Complete
+**Date:** 2026-04-07
+
+### Fixes Applied (1/1)
+
+1. **Token tracking guard logically incorrect** — Removed the `if (llmResponse.inputTokens || llmResponse.outputTokens)` guard so every successful LLM call is always tracked (including when both token counts are `0`). Changed `|| 0` to `?? 0` inside `$inc` to preserve legitimate `0` values while still defaulting `undefined`/`null`.
+
+### Verification
+- `npm run build` passes
+- No new concerns noticed

@@ -16,6 +16,7 @@ export function useUI() {
   return {
     ...context,
     isMinimapVisible: context.state.isMinimapVisible,
+    availableProviders: context.state.availableProviders,
     toggleMinimap,
   };
 }

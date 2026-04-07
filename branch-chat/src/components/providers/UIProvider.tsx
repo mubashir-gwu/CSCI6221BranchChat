@@ -57,10 +57,10 @@ export default function UIProvider({
 
   const refreshProviders = useCallback(async () => {
     try {
-      const res = await fetch("/api/settings/api-keys");
+      const res = await fetch("/api/providers");
       if (!res.ok) return;
       const data = await res.json();
-      const providers = data.keys.map((k: { provider: string }) => k.provider);
+      const providers: string[] = data.providers;
       dispatch({ type: "SET_AVAILABLE_PROVIDERS", payload: providers });
 
       // If current selected provider has no key, switch to first available

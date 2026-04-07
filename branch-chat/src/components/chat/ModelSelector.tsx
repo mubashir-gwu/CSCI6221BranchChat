@@ -79,7 +79,7 @@ export default function ModelSelector({
                   <span className={enabled ? "" : "text-muted-foreground"}>
                     {provider.displayName}
                     {!enabled && (
-                      <span className="ml-1 text-xs opacity-60">(no key)</span>
+                      <span className="ml-1 text-xs opacity-60">(not available)</span>
                     )}
                   </span>
                 </span>
@@ -91,7 +91,7 @@ export default function ModelSelector({
                   onClick={() => {
                     if (!enabled) {
                       toast.info(
-                        `Add an API key for ${provider.displayName} in Settings to use this model.`
+                        `${provider.displayName} is not available. Contact your administrator.`
                       );
                       return;
                     }

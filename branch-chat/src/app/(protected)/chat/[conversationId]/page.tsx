@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
@@ -29,7 +29,6 @@ function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
 export default function ChatPage() {
   const params = useParams<{ conversationId: string }>();
   const conversationId = params.conversationId;
-  const router = useRouter();
 
   const { state, dispatch } = useConversation();
   const { state: uiState, dispatch: uiDispatch } = useUI();
@@ -159,10 +158,8 @@ export default function ChatPage() {
           let showRetry = false;
 
           if (status === 422) {
-            errorMsg = `No API key found for ${provider}.`;
-            toast.error(errorMsg, {
-              action: { label: "Go to Settings", onClick: () => router.push("/settings") },
-            });
+            errorMsg = `Provider ${provider} is not available.`;
+            toast.error(errorMsg);
             return;
           } else if (status === 429) {
             errorMsg = `Rate limited by ${provider}. Please try again in a moment.`;
@@ -171,7 +168,7 @@ export default function ChatPage() {
             const data = await res.json().catch(() => null);
             const serverMsg = data?.error ?? "";
             errorMsg = serverMsg.toLowerCase().includes("invalid api key")
-              ? `Invalid API key for ${provider}. Check your key in Settings.`
+              ? `Invalid API key for ${provider}. Contact your administrator.`
               : `${provider} API error. Please try again.`;
           } else if (status === 504) {
             errorMsg = "Request timed out. The model took too long to respond.";

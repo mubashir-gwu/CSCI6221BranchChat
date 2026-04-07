@@ -14,13 +14,16 @@ export async function GET(
   const requestId = crypto.randomUUID();
   const route = "/api/conversations/[id]/export";
   const start = Date.now();
+
+  logger.info("Route entered", { context: { route, method: "GET", requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn("Unauthorized request", { context: { route, method: "GET", requestId } });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  logger.info("Route entered", { context: { route, method: "GET", userId: session.user.id, requestId, conversationId: id } });
 
   try {
     await connectDB();

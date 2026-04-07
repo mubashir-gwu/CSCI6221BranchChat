@@ -74,6 +74,8 @@ export async function POST(request: Request) {
   const route = "/api/llm/chat";
   const start = Date.now();
 
+  logger.info("Route entered", { context: { route, method: "POST", requestId } });
+
   try {
     let body: any;
     try {
@@ -87,10 +89,9 @@ export async function POST(request: Request) {
     // Auth check — before any validation to prevent information leakage
     const session = await auth();
     if (!session?.user?.id) {
+      logger.warn("Unauthorized request", { context: { route, method: "POST", requestId } });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    logger.info("Route entered", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId } });
 
     // Validate required fields
     if (!conversationId || content === undefined || content === null || !provider || !model) {

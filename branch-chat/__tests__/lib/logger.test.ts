@@ -25,9 +25,13 @@ describe("logger", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  // Helper: logger methods are fire-and-forget async; wait for writes to flush
+  const flush = () => new Promise((r) => setTimeout(r, 50));
+
   it("writes a JSON line to the log file", async () => {
     const { logger } = await import("@/lib/logger");
     logger.info("test message");
+    await flush();
 
     expect(fs.existsSync(logFile)).toBe(true);
     const content = fs.readFileSync(logFile, "utf-8").trim();
@@ -41,6 +45,7 @@ describe("logger", () => {
   it("includes context in log entries", async () => {
     const { logger } = await import("@/lib/logger");
     logger.info("with context", { context: { userId: "abc", requestId: "xyz" } });
+    await flush();
 
     const content = fs.readFileSync(logFile, "utf-8").trim();
     const entry = JSON.parse(content);
@@ -51,6 +56,7 @@ describe("logger", () => {
   it("includes extra fields in log entries", async () => {
     const { logger } = await import("@/lib/logger");
     logger.info("with extra", { status: 200, durationMs: 42 });
+    await flush();
 
     const content = fs.readFileSync(logFile, "utf-8").trim();
     const entry = JSON.parse(content);
@@ -66,6 +72,7 @@ describe("logger", () => {
     logger.info("should be suppressed");
     logger.warn("should be suppressed too");
     logger.error("should appear");
+    await flush();
 
     const content = fs.readFileSync(logFile, "utf-8").trim();
     const lines = content.split("\n").filter(Boolean);
@@ -82,6 +89,7 @@ describe("logger", () => {
 
     const { logger } = await import("@/lib/logger");
     logger.info("create dir");
+    await flush();
 
     expect(fs.existsSync(logsDir)).toBe(true);
     expect(fs.existsSync(logFile)).toBe(true);
@@ -90,6 +98,7 @@ describe("logger", () => {
   it("contains timestamp, level, and message fields", async () => {
     const { logger } = await import("@/lib/logger");
     logger.warn("check fields");
+    await flush();
 
     const content = fs.readFileSync(logFile, "utf-8").trim();
     const entry = JSON.parse(content);
@@ -110,6 +119,7 @@ describe("logger", () => {
     logger.info("i");
     logger.warn("w");
     logger.error("e");
+    await flush();
 
     const lines = fs.readFileSync(logFile, "utf-8").trim().split("\n");
     expect(lines).toHaveLength(5);

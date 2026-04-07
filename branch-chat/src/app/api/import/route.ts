@@ -15,12 +15,14 @@ export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const route = "/api/import";
   const start = Date.now();
+
+  logger.info("Route entered", { context: { route, method: "POST", requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn("Unauthorized request", { context: { route, method: "POST", requestId } });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  logger.info("Route entered", { context: { route, method: "POST", userId: session.user.id, requestId } });
 
   try {
     let body;

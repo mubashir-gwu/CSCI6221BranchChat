@@ -13,13 +13,16 @@ export async function PATCH(
   const requestId = crypto.randomUUID();
   const route = "/api/conversations/[id]";
   const start = Date.now();
+
+  logger.info("Route entered", { context: { route, method: "PATCH", requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn("Unauthorized request", { context: { route, method: "PATCH", requestId } });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  logger.info("Route entered", { context: { route, method: "PATCH", userId: session.user.id, requestId, conversationId: id } });
 
   try {
     let body;
@@ -71,13 +74,16 @@ export async function DELETE(
   const requestId = crypto.randomUUID();
   const route = "/api/conversations/[id]";
   const start = Date.now();
+
+  logger.info("Route entered", { context: { route, method: "DELETE", requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn("Unauthorized request", { context: { route, method: "DELETE", requestId } });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  logger.info("Route entered", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id } });
 
   try {
     await connectDB();

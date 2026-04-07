@@ -938,3 +938,33 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - `npm test` — all tests pass
+
+---
+
+## F-19: Logging — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### Fixes Applied (3/3)
+
+1. **Logger async I/O** (`src/lib/logger.ts`)
+   - Replaced `fs.appendFileSync` with `fs.promises.appendFile`
+   - Made `writeLog` async, `ensureLogDir` uses `fs.promises.mkdir` / `fs.promises.access`
+   - Convenience methods (trace/debug/info/warn/error) call async `writeLog` fire-and-forget
+   - Updated tests in `__tests__/lib/logger.test.ts` with `flush()` helper to await async writes
+
+2. **Route entry log before auth check** (all 9 authenticated API routes)
+   - Moved `logger.info('Route entered', ...)` to before `auth()` call (without `userId`)
+   - Added `logger.warn('Unauthorized request', ...)` before 401 returns
+   - Routes updated: conversations (GET/POST), conversations/[id] (PATCH/DELETE), conversations/[id]/nodes (GET), conversations/[id]/nodes/[nodeId] (DELETE), conversations/[id]/export (GET), llm/chat (POST), import (POST), providers (GET), token-usage (GET)
+
+3. **Try/catch in providers route** (`src/app/api/providers/route.ts`)
+   - Wrapped route body in try/catch with `logger.error` and 500 response
+
+### New Concerns
+- None observed
+
+### Verification
+- `npm run build` passes
+- Logger tests (7/7) pass

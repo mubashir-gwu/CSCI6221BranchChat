@@ -9,12 +9,14 @@ export async function GET() {
   const requestId = crypto.randomUUID();
   const route = '/api/token-usage';
   const start = Date.now();
+
+  logger.info('Route entered', { context: { route, method: 'GET', requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn('Unauthorized request', { context: { route, method: 'GET', requestId } });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  logger.info('Route entered', { context: { route, method: 'GET', userId: session.user.id, requestId } });
 
   try {
     await connectDB();

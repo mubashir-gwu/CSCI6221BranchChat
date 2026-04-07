@@ -17,16 +17,18 @@ function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS.indexOf(level) >= LOG_LEVELS.indexOf(getMinLevel());
 }
 
-function ensureLogDir(): void {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
+async function ensureLogDir(): Promise<void> {
+  try {
+    await fs.promises.access(LOG_DIR);
+  } catch {
+    await fs.promises.mkdir(LOG_DIR, { recursive: true });
   }
 }
 
-function writeLog(level: LogLevel, message: string, extra?: Record<string, unknown>): void {
+async function writeLog(level: LogLevel, message: string, extra?: Record<string, unknown>): Promise<void> {
   if (!shouldLog(level)) return;
 
-  ensureLogDir();
+  await ensureLogDir();
 
   const entry: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
@@ -41,13 +43,13 @@ function writeLog(level: LogLevel, message: string, extra?: Record<string, unkno
   }
 
   const line = JSON.stringify(entry) + '\n';
-  fs.appendFileSync(LOG_FILE, line);
+  await fs.promises.appendFile(LOG_FILE, line);
 }
 
 export const logger = {
-  trace: (message: string, extra?: Record<string, unknown>) => writeLog('TRACE', message, extra),
-  debug: (message: string, extra?: Record<string, unknown>) => writeLog('DEBUG', message, extra),
-  info: (message: string, extra?: Record<string, unknown>) => writeLog('INFO', message, extra),
-  warn: (message: string, extra?: Record<string, unknown>) => writeLog('WARN', message, extra),
-  error: (message: string, extra?: Record<string, unknown>) => writeLog('ERROR', message, extra),
+  trace: (message: string, extra?: Record<string, unknown>) => { writeLog('TRACE', message, extra); },
+  debug: (message: string, extra?: Record<string, unknown>) => { writeLog('DEBUG', message, extra); },
+  info: (message: string, extra?: Record<string, unknown>) => { writeLog('INFO', message, extra); },
+  warn: (message: string, extra?: Record<string, unknown>) => { writeLog('WARN', message, extra); },
+  error: (message: string, extra?: Record<string, unknown>) => { writeLog('ERROR', message, extra); },
 };

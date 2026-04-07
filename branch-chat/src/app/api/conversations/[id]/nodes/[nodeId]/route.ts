@@ -14,13 +14,16 @@ export async function DELETE(
   const requestId = crypto.randomUUID();
   const route = "/api/conversations/[id]/nodes/[nodeId]";
   const start = Date.now();
+
+  logger.info("Route entered", { context: { route, method: "DELETE", requestId } });
+
   const session = await auth();
   if (!session?.user?.id) {
+    logger.warn("Unauthorized request", { context: { route, method: "DELETE", requestId } });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id, nodeId } = await params;
-  logger.info("Route entered", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, nodeId });
 
   try {
     await connectDB();

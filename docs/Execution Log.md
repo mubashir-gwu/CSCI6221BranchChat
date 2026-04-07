@@ -968,3 +968,23 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - Logger tests (7/7) pass
+
+## F-19 Logging — Audit Cycle 2 Fix
+
+**Status:** Complete
+**Date:** 2026-04-07
+
+### Fixes Applied: 1/1
+
+1. **Write queue for serialized log appends** (`src/lib/logger.ts`)
+   - Added module-level `writeChain = Promise.resolve()` to serialize async writes
+   - Each `writeLog` call chains onto the previous promise so writes complete in call order
+   - Changed `writeLog` from `async` to synchronous (chains internally), preserving fire-and-forget at call sites
+   - Test `supports all log levels` now passes without test changes — log lines appear in deterministic order
+
+### New Concerns
+- None observed
+
+### Verification
+- `npm run build` passes
+- Logger tests (7/7) pass

@@ -25,10 +25,10 @@ async function ensureLogDir(): Promise<void> {
   }
 }
 
-async function writeLog(level: LogLevel, message: string, extra?: Record<string, unknown>): Promise<void> {
-  if (!shouldLog(level)) return;
+let writeChain = Promise.resolve();
 
-  await ensureLogDir();
+function writeLog(level: LogLevel, message: string, extra?: Record<string, unknown>): void {
+  if (!shouldLog(level)) return;
 
   const entry: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
@@ -43,7 +43,11 @@ async function writeLog(level: LogLevel, message: string, extra?: Record<string,
   }
 
   const line = JSON.stringify(entry) + '\n';
-  await fs.promises.appendFile(LOG_FILE, line);
+
+  writeChain = writeChain.then(async () => {
+    await ensureLogDir();
+    await fs.promises.appendFile(LOG_FILE, line);
+  });
 }
 
 export const logger = {

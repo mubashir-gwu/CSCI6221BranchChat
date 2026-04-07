@@ -324,13 +324,12 @@ describe("POST /api/llm/chat", () => {
   });
 
   describe("auto-title generation", () => {
-    it("should trigger title generation when conversation title is 'New Conversation'", async () => {
+    it("should generate title and return it in response when title is 'New Conversation'", async () => {
       mockConversationFindById.mockResolvedValue({
         ...mockConversation,
         title: "New Conversation",
       });
 
-      // sendMessage will be called twice: once for chat, once for title
       mockSendMessage
         .mockResolvedValueOnce({
           content: "I'm doing well!",
@@ -348,20 +347,20 @@ describe("POST /api/llm/chat", () => {
         });
 
       const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
-      expect(res.status).toBe(201);
+      const data = await res.json();
 
-      // Wait for fire-and-forget to complete
-      await vi.waitFor(() => {
-        // Title update call (second call after rootNodeId update)
-        const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
-          (call: unknown[]) => {
-            const update = call[1] as Record<string, unknown>;
-            return typeof update.title === "string";
-          }
-        );
-        expect(titleUpdateCalls.length).toBe(1);
-        expect(titleUpdateCalls[0][1]).toEqual({ title: "Greeting Exchange" });
-      });
+      expect(res.status).toBe(201);
+      expect(data.generatedTitle).toBe("Greeting Exchange");
+
+      // Title should be saved to DB
+      const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
+        (call: unknown[]) => {
+          const update = call[1] as Record<string, unknown>;
+          return typeof update.title === "string";
+        }
+      );
+      expect(titleUpdateCalls.length).toBe(1);
+      expect(titleUpdateCalls[0][1]).toEqual({ title: "Greeting Exchange" });
     });
 
     it("should NOT trigger title generation when title is not 'New Conversation'", async () => {
@@ -371,7 +370,10 @@ describe("POST /api/llm/chat", () => {
       });
 
       const res = await POST(makeRequest(validBody));
+      const data = await res.json();
+
       expect(res.status).toBe(201);
+      expect(data.generatedTitle).toBeUndefined();
 
       // sendMessage should only be called once (for the chat itself)
       expect(mockSendMessage).toHaveBeenCalledTimes(1);
@@ -399,6 +401,7 @@ describe("POST /api/llm/chat", () => {
       expect(res.status).toBe(201);
       expect(data.userNode).toBeDefined();
       expect(data.assistantNode).toBeDefined();
+      expect(data.generatedTitle).toBeUndefined();
     });
 
     it("should track token usage for the title generation call", async () => {
@@ -425,23 +428,20 @@ describe("POST /api/llm/chat", () => {
 
       await POST(makeRequest({ ...validBody, parentNodeId: null }));
 
-      // Wait for fire-and-forget to complete
-      await vi.waitFor(() => {
-        // Token usage should be tracked twice: once for chat, once for title
-        expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledTimes(2);
-        // Second call should be for title generation tokens
-        expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
-          { userId: "user-1", provider: "openai" },
-          {
-            $inc: {
-              inputTokens: 5,
-              outputTokens: 3,
-              callCount: 1,
-            },
+      // Token usage should be tracked twice: once for chat, once for title
+      expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledTimes(2);
+      // Second call should be for title generation tokens
+      expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
+        { userId: "user-1", provider: "openai" },
+        {
+          $inc: {
+            inputTokens: 5,
+            outputTokens: 3,
+            callCount: 1,
           },
-          { upsert: true }
-        );
-      });
+        },
+        { upsert: true }
+      );
     });
 
     it("should truncate title to 200 characters", async () => {
@@ -467,18 +467,19 @@ describe("POST /api/llm/chat", () => {
           outputTokens: 3,
         });
 
-      await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      const data = await res.json();
 
-      await vi.waitFor(() => {
-        const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
-          (call: unknown[]) => {
-            const update = call[1] as Record<string, unknown>;
-            return typeof update.title === "string";
-          }
-        );
-        expect(titleUpdateCalls.length).toBe(1);
-        expect((titleUpdateCalls[0][1] as Record<string, string>).title.length).toBe(200);
-      });
+      expect(data.generatedTitle.length).toBe(200);
+
+      const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
+        (call: unknown[]) => {
+          const update = call[1] as Record<string, unknown>;
+          return typeof update.title === "string";
+        }
+      );
+      expect(titleUpdateCalls.length).toBe(1);
+      expect((titleUpdateCalls[0][1] as Record<string, string>).title.length).toBe(200);
     });
   });
 

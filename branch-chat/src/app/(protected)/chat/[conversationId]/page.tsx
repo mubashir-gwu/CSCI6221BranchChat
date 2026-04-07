@@ -202,16 +202,16 @@ export default function ChatPage() {
           payload: { provider, model },
         });
 
-        // After first message, re-fetch conversations to pick up auto-generated title
-        if (state.activeNodeId === null) {
-          fetch("/api/conversations")
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
-              if (data?.conversations) {
-                dispatch({ type: "SET_CONVERSATIONS", payload: data.conversations });
-              }
-            })
-            .catch(() => {});
+        // Update sidebar title if auto-title was generated
+        if (data.generatedTitle) {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              title: data.generatedTitle,
+              updatedAt: new Date().toISOString(),
+            },
+          });
         }
       } catch {
         dispatch({ type: "REMOVE_NODES", payload: [tempId] });

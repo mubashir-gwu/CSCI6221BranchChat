@@ -20,7 +20,7 @@ async function generateTitle(
   provider: string,
   model: string,
   userId: string
-): Promise<void> {
+): Promise<string | null> {
   const llmProvider = getProvider(provider);
   const titleMessages: LLMMessage[] = [
     {
@@ -49,6 +49,8 @@ async function generateTitle(
       { upsert: true }
     );
   }
+
+  return title;
 }
 
 function serializeNode(doc: any): NodeResponse {
@@ -198,23 +200,27 @@ export async function POST(request: Request) {
         // Token tracking failure should not break the chat response
       }
 
-      // Fire-and-forget auto-title for first message
+      // Auto-generate title for first message
+      let generatedTitle: string | null = null;
       if (conversation.title === "New Conversation") {
-        generateTitle(
-          conversationId,
-          content.trim(),
-          provider,
-          model,
-          session.user.id
-        ).catch(() => {
-          // Log error but don't propagate — title stays "New Conversation"
-        });
+        try {
+          generatedTitle = await generateTitle(
+            conversationId,
+            content.trim(),
+            provider,
+            model,
+            session.user.id
+          );
+        } catch {
+          // Title generation failure is non-critical — title stays "New Conversation"
+        }
       }
 
       return NextResponse.json(
         {
           userNode: serializeNode(userNode),
           assistantNode: serializeNode(assistantNode),
+          ...(generatedTitle !== null && { generatedTitle }),
         },
         { status: 201 }
       );

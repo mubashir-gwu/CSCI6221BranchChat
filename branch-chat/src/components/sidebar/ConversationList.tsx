@@ -3,14 +3,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useConversation } from "@/hooks/useConversation";
 import ConversationItem from "@/components/sidebar/ConversationItem";
@@ -20,8 +12,6 @@ import { toast } from "sonner";
 export default function ConversationList() {
   const { state, dispatch } = useConversation();
   const router = useRouter();
-  const [showNewDialog, setShowNewDialog] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,16 +64,13 @@ export default function ConversationList() {
   }
 
   async function handleCreate() {
-    const trimmed = newTitle.trim();
-    if (!trimmed) return;
-
     setCreating(true);
     try {
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: trimmed,
+          title: "New Conversation",
           defaultProvider: "openai",
           defaultModel: MODELS.openai[0].id,
         }),
@@ -93,8 +80,6 @@ export default function ConversationList() {
 
       const data = await res.json();
       dispatch({ type: "ADD_CONVERSATION", payload: data });
-      setShowNewDialog(false);
-      setNewTitle("");
       router.push(`/chat/${data.id}`);
     } catch {
       toast.error("Failed to create conversation");
@@ -120,8 +105,8 @@ export default function ConversationList() {
           >
             {importing ? "Importing..." : "Import"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowNewDialog(true)}>
-            + New
+          <Button size="sm" variant="outline" onClick={handleCreate} disabled={creating}>
+            {creating ? "Creating..." : "+ New"}
           </Button>
         </div>
       </div>
@@ -154,30 +139,6 @@ export default function ConversationList() {
         </div>
       </ScrollArea>
 
-      <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Conversation</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Conversation title"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !creating) handleCreate();
-            }}
-            autoFocus
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={creating || !newTitle.trim()}>
-              {creating ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -21,7 +21,7 @@ vi.mock("@xyflow/react", () => {
             data-testid={`rf-node-${node.id}`}
             data-active={String(node.data.isActive)}
             data-role={String(node.data.role)}
-            onClick={() => onNodeClick(null, { id: node.id })}
+            onClick={() => onNodeClick(null, { id: node.id, data: node.data })}
           >
             {String(node.data.label)}
           </div>
@@ -101,7 +101,7 @@ describe("TreeVisualization", () => {
     expect(screen.getByTestId("rf-node-a").dataset.active).toBe("false");
   });
 
-  it("calls onNodeClick with correct nodeId when node is clicked", () => {
+  it("calls onNodeClick when an assistant node is clicked", () => {
     const handleClick = vi.fn();
     const nodes = new Map<string, TreeNode>([
       ["a", makeNode("a", null, "user", "Hello")],
@@ -120,6 +120,27 @@ describe("TreeVisualization", () => {
 
     fireEvent.click(screen.getByTestId("rf-node-b"));
     expect(handleClick).toHaveBeenCalledWith("b");
+  });
+
+  it("does NOT call onNodeClick when a user node is clicked", () => {
+    const handleClick = vi.fn();
+    const nodes = new Map<string, TreeNode>([
+      ["a", makeNode("a", null, "user", "Hello")],
+      ["b", makeNode("b", "a", "assistant", "Reply")],
+    ]);
+    const childrenMap: ChildrenMap = new Map([["a", ["b"]]]);
+
+    render(
+      <TreeVisualization
+        nodes={nodes}
+        childrenMap={childrenMap}
+        activeNodeId="b"
+        onNodeClick={handleClick}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("rf-node-a"));
+    expect(handleClick).not.toHaveBeenCalled();
   });
 
   it("renders empty state when no nodes", () => {

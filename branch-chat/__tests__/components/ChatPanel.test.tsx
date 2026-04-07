@@ -29,6 +29,11 @@ vi.mock("react-syntax-highlighter/dist/esm/styles/prism", () => ({
   oneDark: {},
 }));
 
+// Mock ConfirmDialog
+vi.mock("@/components/common/ConfirmDialog", () => ({
+  default: () => null,
+}));
+
 import ChatPanel from "@/components/chat/ChatPanel";
 
 function makeNode(
@@ -137,6 +142,53 @@ describe("ChatPanel", () => {
     );
 
     expect(screen.queryByText(/branches/)).toBeNull();
+  });
+
+  it("renders delete button for user messages when onDeleteNode is provided", () => {
+    const nodeA = makeNode("a", null, "user", "User message");
+    const nodesMap = new Map<string, TreeNode>([["a", nodeA]]);
+    const childrenMap: ChildrenMap = new Map([["a", []]]);
+
+    render(
+      <ChatPanel
+        activePath={[nodeA]}
+        childrenMap={childrenMap}
+        nodesMap={nodesMap}
+        onBranchNavigate={vi.fn()}
+        onDeleteNode={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    expect(screen.getByLabelText("Delete message and replies")).toBeDefined();
+  });
+
+  it("does NOT render delete button for assistant messages", () => {
+    const nodeA = makeNode("a", null, "user", "Hello");
+    const nodeB = makeNode("b", "a", "assistant", "Reply");
+    const nodesMap = new Map<string, TreeNode>([
+      ["a", nodeA],
+      ["b", nodeB],
+    ]);
+    const childrenMap: ChildrenMap = new Map([
+      ["a", ["b"]],
+      ["b", []],
+    ]);
+
+    render(
+      <ChatPanel
+        activePath={[nodeA, nodeB]}
+        childrenMap={childrenMap}
+        nodesMap={nodesMap}
+        onBranchNavigate={vi.fn()}
+        onDeleteNode={vi.fn()}
+        isLoading={false}
+      />
+    );
+
+    // Should only have one delete button (for the user message), not two
+    const deleteButtons = screen.getAllByLabelText("Delete message and replies");
+    expect(deleteButtons).toHaveLength(1);
   });
 
   it("renders scroll area when isLoading is true even with empty path", () => {

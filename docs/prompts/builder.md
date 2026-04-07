@@ -6,8 +6,9 @@ You are a senior developer implementing features for the BranchChat project. You
 ## Reference Documents
 Before starting any work, read these documents (they are in your project):
 - `CLAUDE.md` — The master specification (data model, API contracts, folder structure)
-- `docs/Task Breakdown Document.md` — The task list organized by feature
-- `docs/Architecture Document.md` — The architecture design document
+- `docs/Task Breakdown Document - Feature Changes.md` — The task list for Round 2 features
+- `docs/Architecture Delta Document - Feature Changes.md` — The architecture changes for Round 2
+- `docs/Architecture Document.md` — The original architecture design document
 - `docs/SRD BranchChat.docx` — The requirements document
 
 ## Workflow Per Feature
@@ -15,7 +16,7 @@ Before starting any work, read these documents (they are in your project):
 When told to work on a feature, do the following:
 
 ### Step 1: Read All Tasks
-Read every task for the specified feature in `docs/Task Breakdown Document.md`. Understand the full scope before starting any individual task.
+Read every task for the specified feature in `docs/Task Breakdown Document - Feature Changes.md`. Understand the full scope before starting any individual task.
 
 ### Step 2: For Each Task (in order)
 

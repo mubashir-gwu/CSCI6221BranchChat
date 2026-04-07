@@ -12,5 +12,7 @@ export const config = {
     '/api/llm/:path*',
     '/api/settings/:path*',
     '/api/import/:path*',
+    '/api/providers/:path*',
+    '/usage',
   ],
 };

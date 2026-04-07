@@ -145,8 +145,8 @@ export default function ChatMessage({
           </div>
         )}
 
-        {/* Delete button (visible on hover) */}
-        {onDelete && (
+        {/* Delete button (visible on hover, user messages only) */}
+        {onDelete && isUser && (
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="absolute -top-2 -right-2 hidden rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm transition-opacity group-hover:block"
@@ -158,7 +158,7 @@ export default function ChatMessage({
       </div>
 
       {/* Delete confirmation dialog */}
-      {onDelete && (
+      {onDelete && isUser && (
         <ConfirmDialog
           open={showDeleteConfirm}
           onOpenChange={setShowDeleteConfirm}

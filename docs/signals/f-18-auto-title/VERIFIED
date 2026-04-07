@@ -1,0 +1,11 @@
+Audit passed. No issues found.
+
+All acceptance criteria for T-087, T-088, and T-089 are met:
+- Auto-title fires on first message when title is "New Conversation" (fire-and-forget, non-blocking)
+- Title truncated to 200 characters
+- Failure is silent — no user-facing error
+- Token usage tracked for title generation call
+- Client re-fetches conversation list after first message (no setTimeout)
+- 5 dedicated auto-title tests pass
+- npm run build passes
+- 147 tests pass across 16 test files

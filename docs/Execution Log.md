@@ -766,3 +766,75 @@ Updated the Gemini model entry in:
 - Tests: renders without crashing, shows three options, calls setTheme for dark/light/system
 - Mocks `next-themes` `useTheme` hook
 - All 135 tests pass (15 files), build passes
+
+## F-17: Server-Level API Keys & Provider Availability Gating
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-077: Create TokenUsage Model
+- Created `src/models/TokenUsage.ts` with unique compound index on `{ userId, provider }`
+- Fields: userId, provider (enum), inputTokens, outputTokens, callCount, updatedAt
+- Build passes
+
+### T-078: Create Provider Availability Utility and API Route
+- Created `src/lib/providers/availability.ts` with `getAvailableProviders()`, `isProviderAvailable()`, `getProviderApiKey()`
+- Checks env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY); includes mock in dev
+- Created `GET /api/providers` route (auth required)
+- Added `/api/providers/:path*` and `/usage` to middleware matcher
+
+### T-079: Update LLM Provider Interface and Implementations
+- Removed `apiKey` parameter from `LLMProvider.sendMessage()` interface
+- Each provider now reads its key from `process.env` internally
+- Added `inputTokens`/`outputTokens` to `LLMResponse` (required fields)
+- OpenAI: extracts from `response.usage.prompt_tokens`/`completion_tokens`
+- Anthropic: extracts from `response.usage.input_tokens`/`output_tokens`
+- Gemini: extracts from `response.usageMetadata.promptTokenCount`/`candidatesTokenCount`
+- Mock: estimates tokens from content length (`ceil(length/4)`)
+
+### T-080: Update LLM Chat Route Handler
+- Removed encryption/ApiKey imports and decryption logic
+- Added `isProviderAvailable()` check — returns 422 if provider env var not set
+- Added token usage tracking via `TokenUsage.findOneAndUpdate` with `$inc` and `upsert`
+- Token tracking wrapped in try/catch so failures don't break chat response
+
+### T-081: Create Token Usage API Route and Usage Page
+- Created `GET /api/token-usage` route returning per-provider usage for authenticated user
+- Created `TokenUsageCard` component in `src/components/dashboard/` — displays cards per provider with input/output tokens and call count
+- Created `/usage` page rendering TokenUsageCard
+- Added `/api/token-usage/:path*` to middleware matcher
+
+### T-082: Update ModelSelector for Provider Availability Gating
+- Changed UIProvider to fetch from `/api/providers` instead of `/api/settings/api-keys`
+- Preserved fetch-and-dispatch pattern to avoid stale-closure bugs
+- Updated ModelSelector labels: "(no key)" → "(not available)"
+- Updated toast message to remove Settings reference
+- Exposed `availableProviders` from `useUI()` hook
+
+### T-083: Update Import to Default to Available Provider
+- Import route now checks if default provider (openai) is available
+- Falls back to first available provider if not
+- Uses `MODELS` constant to set matching default model
+
+### T-084: Remove Dead Code
+- Deleted: `ApiKey` model, `encryption.ts`, `ApiKeyForm`, `ApiKeyList`, settings page, settings API routes
+- Deleted: `api-keys.test.ts`, `encryption.test.ts`
+- Updated protected layout: Settings → Usage link
+- Removed dashboard API keys check banner
+- Cleaned ApiKey types from `api.ts` and `database.ts`
+- Removed `/settings` and `/api/settings/:path*` from middleware matcher
+- Updated `.env.example`: removed `ENCRYPTION_KEY`, added LLM API key placeholders
+
+### T-085: Update LLM Chat Route Error Handling
+- 422 error now shows "Provider X is not available" instead of "No API key found"
+- Removed "Go to Settings" action from error toast
+- Updated 502 invalid key message to say "Contact your administrator"
+- Removed unused `useRouter` import
+
+### T-086: Write Tests
+- Created `providers-availability.test.ts` — 10 tests for availability utility
+- Updated `llm-chat.test.ts` — removed encryption/ApiKey mocks, added provider availability mock, added token usage tracking tests
+- Created `usage.test.ts` — 3 tests for token usage API
+- Created `providers.test.ts` — 3 tests for providers API
+- Updated `ModelSelector.test.tsx` — updated "(no key)" → "(not available)", added availability gating tests
+- All 142 tests pass (16 files), build passes

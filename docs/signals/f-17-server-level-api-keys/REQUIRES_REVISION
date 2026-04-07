@@ -1,0 +1,6 @@
+One medium-severity fix needed for token tracking logic:
+
+1. Token tracking guard is logically incorrect.
+   - File: src/app/api/llm/chat/route.ts, line 148
+   - Issue: The guard `if (llmResponse.inputTokens || llmResponse.outputTokens)` uses JavaScript truthiness. If both values are `0`, the entire upsert block is skipped — `callCount` never increments and the call is silently untracked. Additionally, `|| 0` inside `$inc` swallows legitimate `0` values.
+   - Fix: Remove the `if` guard entirely so every successful LLM call is always tracked. Change `llmResponse.inputTokens || 0` to `llmResponse.inputTokens ?? 0` and `llmResponse.outputTokens || 0` to `llmResponse.outputTokens ?? 0` inside the `$inc` object.

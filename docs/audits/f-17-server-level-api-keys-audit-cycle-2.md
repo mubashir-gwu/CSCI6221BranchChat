@@ -113,7 +113,10 @@ All three have been addressed in this cycle. Verification below.
 
 ### New issues found
 
-4. **Token tracking guard condition** (`llm/chat/route.ts:148`): `if (llmResponse.inputTokens || llmResponse.outputTokens)` would skip tracking if both values are exactly `0`. Severity: **Low** — purely theoretical since every real LLM call returns non-zero token counts. Mock provider always returns non-zero values as well.
+4. **Token tracking guard condition is logically incorrect.** Severity: **Medium.**
+   - **File:** `src/app/api/llm/chat/route.ts`, line 148.
+   - **Description:** The guard `if (llmResponse.inputTokens || llmResponse.outputTokens)` uses JavaScript truthiness, which means if both values are exactly `0`, the entire upsert block is skipped — `callCount` is never incremented and the call is silently untracked. While no current provider returns `0` for both, the guard is semantically wrong: a successful LLM call should always be tracked regardless of token counts. The `|| 0` fallbacks inside `$inc` have the same truthiness issue — they should be `?? 0` to guard against `undefined`/`null` without swallowing `0`.
+   - **Fix:** Remove the `if` guard entirely so every successful LLM call is tracked. Change `|| 0` to `?? 0` inside the `$inc` object.
 
 No other bugs found:
 - All promise rejections handled with try/catch.
@@ -201,6 +204,6 @@ No deviations.
 
 ## Summary
 - Critical issues: 0
-- Medium issues: 0 (all 3 from cycle 1 fixed and verified)
-- Low issues: 1 (token tracking guard skips `callCount` when both token values are 0 — theoretical only)
-- Recommendation: **PROCEED**
+- Medium issues: 1 (token tracking guard is logically incorrect — skips tracking when both token values are 0)
+- Low issues: 0
+- Recommendation: **FIX FIRST**

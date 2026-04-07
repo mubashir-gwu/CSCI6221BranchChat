@@ -1,6 +1,18 @@
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { TreeNode, ChildrenMap } from "@/types/tree";
+
+// Mock useUI hook for minimap visibility
+const mockUseUI = vi.fn().mockReturnValue({
+  isMinimapVisible: true,
+  toggleMinimap: vi.fn(),
+  state: { isMinimapVisible: true },
+  dispatch: vi.fn(),
+});
+vi.mock("@/hooks/useUI", () => ({
+  useUI: () => mockUseUI(),
+}));
 
 // Mock @xyflow/react to avoid canvas/DOM measurement issues in jsdom
 vi.mock("@xyflow/react", () => {
@@ -8,10 +20,12 @@ vi.mock("@xyflow/react", () => {
     ReactFlow: ({
       nodes,
       onNodeClick,
+      children,
     }: {
       nodes: { id: string; data: Record<string, unknown> }[];
       edges: unknown[];
       onNodeClick: (event: unknown, node: { id: string }) => void;
+      children?: React.ReactNode;
       [key: string]: unknown;
     }) => (
       <div data-testid="react-flow">
@@ -26,6 +40,7 @@ vi.mock("@xyflow/react", () => {
             {String(node.data.label)}
           </div>
         ))}
+        {children}
       </div>
     ),
     Controls: () => <div data-testid="controls" />,
@@ -154,5 +169,57 @@ describe("TreeVisualization", () => {
     );
 
     expect(screen.getByText("No messages yet")).toBeDefined();
+  });
+
+  it("renders MiniMap when isMinimapVisible is true", () => {
+    mockUseUI.mockReturnValue({
+      isMinimapVisible: true,
+      toggleMinimap: vi.fn(),
+      state: { isMinimapVisible: true },
+      dispatch: vi.fn(),
+    });
+
+    const nodes = new Map<string, TreeNode>([
+      ["a", makeNode("a", null, "user", "Hello")],
+      ["b", makeNode("b", "a", "assistant", "Reply")],
+    ]);
+    const childrenMap: ChildrenMap = new Map([["a", ["b"]]]);
+
+    render(
+      <TreeVisualization
+        nodes={nodes}
+        childrenMap={childrenMap}
+        activeNodeId="b"
+        onNodeClick={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("minimap")).toBeDefined();
+  });
+
+  it("does NOT render MiniMap when isMinimapVisible is false", () => {
+    mockUseUI.mockReturnValue({
+      isMinimapVisible: false,
+      toggleMinimap: vi.fn(),
+      state: { isMinimapVisible: false },
+      dispatch: vi.fn(),
+    });
+
+    const nodes = new Map<string, TreeNode>([
+      ["a", makeNode("a", null, "user", "Hello")],
+      ["b", makeNode("b", "a", "assistant", "Reply")],
+    ]);
+    const childrenMap: ChildrenMap = new Map([["a", ["b"]]]);
+
+    render(
+      <TreeVisualization
+        nodes={nodes}
+        childrenMap={childrenMap}
+        activeNodeId="b"
+        onNodeClick={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("minimap")).toBeNull();
   });
 });

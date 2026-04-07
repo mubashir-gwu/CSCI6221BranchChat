@@ -87,7 +87,7 @@ export default function ChatMessage({
         <div
           className={`prose prose-sm prose-code:text-sm prose-pre:overflow-x-auto max-w-none wrap-break-word ${
             isUser
-              ? "prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground prose-code:text-primary-foreground"
+              ? "prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground prose-code:text-primary-foreground prose-li:text-primary-foreground prose-ul:marker:text-primary-foreground prose-ol:marker:text-primary-foreground"
               : "dark:prose-invert"
           }`}
         >

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { decrypt } from "@/lib/encryption";
 import { buildContext } from "@/lib/contextBuilder";
 import { getProvider } from "@/lib/providers";
+import { isProviderAvailable } from "@/lib/providers/availability";
 import { Conversation } from "@/models/Conversation";
-import { ApiKey } from "@/models/ApiKey";
 import { Node } from "@/models/Node";
+import { TokenUsage } from "@/models/TokenUsage";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
 import type { NodeResponse } from "@/types/api";
@@ -61,6 +61,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Mock provider is only available in development" }, { status: 400 });
     }
 
+    // Check provider availability (env var key configured)
+    if (!isProviderAvailable(provider)) {
+      return NextResponse.json(
+        { error: `Provider ${provider} is not configured.` },
+        { status: 422 }
+      );
+    }
+
     // Validate model against provider's model list
     const providerModels = MODELS[provider as keyof typeof MODELS];
     const modelDef = providerModels?.find((m) => m.id === model);
@@ -77,19 +85,6 @@ export async function POST(request: Request) {
     }
     if (conversation.userId.toString() !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Decrypt API key (skip for mock provider)
-    let apiKey = "";
-    if (provider !== "mock") {
-      const keyDoc = await ApiKey.findOne({ userId: session.user.id, provider }).lean() as any;
-      if (!keyDoc) {
-        return NextResponse.json(
-          { error: `No API key found for ${provider}.` },
-          { status: 422 }
-        );
-      }
-      apiKey = decrypt(keyDoc.encryptedKey, keyDoc.iv, keyDoc.authTag);
     }
 
     // Load all nodes and build context
@@ -147,6 +142,25 @@ export async function POST(request: Request) {
         provider,
         model,
       });
+
+      // Track token usage (non-blocking)
+      try {
+        if (llmResponse.inputTokens || llmResponse.outputTokens) {
+          await TokenUsage.findOneAndUpdate(
+            { userId: session.user.id, provider },
+            {
+              $inc: {
+                inputTokens: llmResponse.inputTokens || 0,
+                outputTokens: llmResponse.outputTokens || 0,
+                callCount: 1,
+              },
+            },
+            { upsert: true }
+          );
+        }
+      } catch {
+        // Token tracking failure should not break the chat response
+      }
 
       return NextResponse.json(
         {

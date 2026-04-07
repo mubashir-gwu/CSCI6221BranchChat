@@ -359,6 +359,7 @@ Server-side only. Structured JSON lines written to `logs/app.log`.
 **Key events to log:**
 - API route entry/exit (method, path, status, duration)
 - LLM calls (provider, model, token count, duration)
+- LLM message content and response content (DEBUG level only — set `LOG_LEVEL=DEBUG`)
 - Auth events (login, register)
 - DB operations (create/delete conversation/node)
 - Errors with stack traces

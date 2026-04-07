@@ -183,9 +183,11 @@ export async function POST(request: Request) {
     // Call LLM provider
     try {
       logger.info("LLM call started", { context: { requestId, conversationId, userId: session.user.id }, provider, model, messageCount: messages.length });
+      logger.debug("LLM messages", { context: { requestId, conversationId }, messages });
       const llmStart = Date.now();
       const llmResponse = await getProvider(provider).sendMessage(messages, model);
       logger.info("LLM call completed", { context: { requestId, conversationId, userId: session.user.id }, provider, model, inputTokens: llmResponse.inputTokens, outputTokens: llmResponse.outputTokens, durationMs: Date.now() - llmStart });
+      logger.debug("LLM response content", { context: { requestId, conversationId }, content: llmResponse.content });
 
       // Insert assistant node
       const assistantNode = await Node.create({

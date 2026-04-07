@@ -1,0 +1,3 @@
+Audit passed. No issues found.
+
+Note (low-severity, informational): ThemeToggle is placed inside the sidebar, so it is not accessible when the sidebar is closed. This is a minor usability concern but does not violate any acceptance criteria.

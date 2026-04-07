@@ -151,3 +151,12 @@
 .dark .react-flow__controls button svg {
   fill: var(--foreground);
 }
+
+.dark .react-flow__minimap {
+  background: var(--background);
+}
+
+.dark .react-flow__minimap-mask {
+  fill: var(--background);
+  opacity: 0.85;
+}

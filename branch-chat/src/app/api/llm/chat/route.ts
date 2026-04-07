@@ -9,9 +9,47 @@ import { Node } from "@/models/Node";
 import { TokenUsage } from "@/models/TokenUsage";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
+import type { LLMMessage } from "@/lib/providers/types";
 import type { NodeResponse } from "@/types/api";
 
 export const maxDuration = 60;
+
+async function generateTitle(
+  conversationId: string,
+  firstUserMessage: string,
+  provider: string,
+  model: string,
+  userId: string
+): Promise<void> {
+  const llmProvider = getProvider(provider);
+  const titleMessages: LLMMessage[] = [
+    {
+      role: "system",
+      content:
+        "Generate a concise title (max 6 words) for a conversation that starts with this message. Reply with only the title, no quotes or punctuation.",
+    },
+    { role: "user", content: firstUserMessage },
+  ];
+  const response = await llmProvider.sendMessage(titleMessages, model);
+  const title = response.content.trim().slice(0, 200);
+
+  await Conversation.findByIdAndUpdate(conversationId, { title });
+
+  // Track token usage for the title generation call
+  if (response.inputTokens || response.outputTokens) {
+    await TokenUsage.findOneAndUpdate(
+      { userId, provider },
+      {
+        $inc: {
+          inputTokens: response.inputTokens || 0,
+          outputTokens: response.outputTokens || 0,
+          callCount: 1,
+        },
+      },
+      { upsert: true }
+    );
+  }
+}
 
 function serializeNode(doc: any): NodeResponse {
   return {
@@ -158,6 +196,19 @@ export async function POST(request: Request) {
         );
       } catch {
         // Token tracking failure should not break the chat response
+      }
+
+      // Fire-and-forget auto-title for first message
+      if (conversation.title === "New Conversation") {
+        generateTitle(
+          conversationId,
+          content.trim(),
+          provider,
+          model,
+          session.user.id
+        ).catch(() => {
+          // Log error but don't propagate — title stays "New Conversation"
+        });
       }
 
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { buildContext } from "@/lib/contextBuilder";
@@ -9,6 +10,7 @@ import { Node } from "@/models/Node";
 import { TokenUsage } from "@/models/TokenUsage";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
+import { logger } from "@/lib/logger";
 import type { LLMMessage } from "@/lib/providers/types";
 import type { NodeResponse } from "@/types/api";
 
@@ -66,6 +68,10 @@ function serializeNode(doc: any): NodeResponse {
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/llm/chat";
+  const start = Date.now();
+
   try {
     let body: any;
     try {
@@ -81,6 +87,8 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    logger.info("Route entered", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId } });
 
     // Validate required fields
     if (!conversationId || content === undefined || content === null || !provider || !model) {
@@ -171,7 +179,10 @@ export async function POST(request: Request) {
 
     // Call LLM provider
     try {
+      logger.info("LLM call started", { context: { requestId, conversationId, userId: session.user.id }, provider, model, messageCount: messages.length });
+      const llmStart = Date.now();
       const llmResponse = await getProvider(provider).sendMessage(messages, model);
+      logger.info("LLM call completed", { context: { requestId, conversationId, userId: session.user.id }, provider, model, inputTokens: llmResponse.inputTokens, outputTokens: llmResponse.outputTokens, durationMs: Date.now() - llmStart });
 
       // Insert assistant node
       const assistantNode = await Node.create({
@@ -216,6 +227,7 @@ export async function POST(request: Request) {
         }
       }
 
+      logger.info("Route completed", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId }, status: 201, durationMs: Date.now() - start });
       return NextResponse.json(
         {
           userNode: serializeNode(userNode),
@@ -225,6 +237,7 @@ export async function POST(request: Request) {
         { status: 201 }
       );
     } catch (llmError: any) {
+      logger.error("LLM call failed", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId }, provider, model, error: llmError?.message, stack: llmError?.stack });
       // Clean up the user node on LLM failure to avoid orphaned branches
       await Node.deleteOne({ _id: userNode._id });
       // If this was the first message, reset rootNodeId
@@ -250,6 +263,7 @@ export async function POST(request: Request) {
       );
     }
   } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "POST", requestId }, error: error?.message, stack: error?.stack });
     if (error?.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

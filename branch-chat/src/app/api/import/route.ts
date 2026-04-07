@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { Types } from "mongoose";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
@@ -7,13 +8,19 @@ import { getAvailableProviders, isProviderAvailable } from "@/lib/providers/avai
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
 import { MODELS } from "@/constants/models";
+import { logger } from "@/lib/logger";
 import type { ExportedTree } from "@/types/export";
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/import";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  logger.info("Route entered", { context: { route, method: "POST", userId: session.user.id, requestId } });
 
   try {
     let body;
@@ -107,6 +114,7 @@ export async function POST(request: NextRequest) {
 
     await Node.insertMany(remappedNodes);
 
+    logger.info("Route completed", { context: { route, method: "POST", userId: session.user.id, requestId }, status: 201, nodeCount: remappedNodes.length, defaultProvider, durationMs: Date.now() - start });
     return NextResponse.json(
       {
         conversationId: conversation._id.toString(),
@@ -115,7 +123,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "POST", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

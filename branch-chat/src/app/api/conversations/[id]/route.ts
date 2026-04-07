@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
+import { logger } from "@/lib/logger";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/conversations/[id]";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  logger.info("Route entered", { context: { route, method: "PATCH", userId: session.user.id, requestId, conversationId: id } });
 
   try {
     let body;
@@ -43,12 +49,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    logger.info("Route completed", { context: { route, method: "PATCH", userId: session.user.id, requestId, conversationId: id }, status: 200, durationMs: Date.now() - start });
     return NextResponse.json({
       id: conversation._id.toString(),
       title: conversation.title,
       updatedAt: conversation.updatedAt.toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "PATCH", userId: session.user.id, requestId, conversationId: id }, error: error?.message, stack: error?.stack });
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
@@ -60,12 +68,16 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/conversations/[id]";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  logger.info("Route entered", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id } });
 
   try {
     await connectDB();
@@ -82,8 +94,10 @@ export async function DELETE(
     await Node.deleteMany({ conversationId: id });
     await Conversation.deleteOne({ _id: id });
 
+    logger.info("Route completed", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, status: 200, durationMs: Date.now() - start });
     return NextResponse.json({ deleted: true });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, error: error?.message, stack: error?.stack });
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

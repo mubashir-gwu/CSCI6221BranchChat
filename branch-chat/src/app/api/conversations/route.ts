@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { Conversation } from "@/models/Conversation";
 import { MODELS } from "@/constants/models";
 import { PROVIDERS } from "@/constants/providers";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
+  const requestId = crypto.randomUUID();
+  const route = "/api/conversations";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  logger.info("Route entered", { context: { route, method: "GET", userId: session.user.id, requestId } });
 
   try {
     await connectDB();
@@ -18,6 +25,7 @@ export async function GET() {
       .sort({ updatedAt: -1 })
       .lean();
 
+    logger.info("Route completed", { context: { route, method: "GET", userId: session.user.id, requestId }, status: 200, durationMs: Date.now() - start });
     return NextResponse.json({
       conversations: conversations.map((c) => ({
         id: c._id.toString(),
@@ -29,7 +37,8 @@ export async function GET() {
         updatedAt: c.updatedAt.toISOString(),
       })),
     });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "GET", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
@@ -38,10 +47,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/conversations";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  logger.info("Route entered", { context: { route, method: "POST", userId: session.user.id, requestId } });
 
   try {
     let body;
@@ -83,6 +97,7 @@ export async function POST(request: Request) {
       defaultModel,
     });
 
+    logger.info("Route completed", { context: { route, method: "POST", userId: session.user.id, requestId }, status: 201, durationMs: Date.now() - start });
     return NextResponse.json(
       {
         id: conversation._id.toString(),
@@ -95,7 +110,8 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "POST", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
+import { logger } from "@/lib/logger";
 import type { ChildrenMap } from "@/types/tree";
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; nodeId: string }> }
 ) {
+  const requestId = crypto.randomUUID();
+  const route = "/api/conversations/[id]/nodes/[nodeId]";
+  const start = Date.now();
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id, nodeId } = await params;
+  logger.info("Route entered", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, nodeId });
 
   try {
     await connectDB();
@@ -67,11 +73,13 @@ export async function DELETE(
 
     const newActiveNodeId = targetNode.parentId?.toString() ?? null;
 
+    logger.info("Route completed", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, nodeId, deletedCount: result.deletedCount, status: 200, durationMs: Date.now() - start });
     return NextResponse.json({
       deletedCount: result.deletedCount,
       newActiveNodeId,
     });
-  } catch (error) {
+  } catch (error: any) {
+    logger.error("Route error", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, error: error?.message, stack: error?.stack });
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

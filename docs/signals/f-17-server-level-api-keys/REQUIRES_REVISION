@@ -1,0 +1,16 @@
+Three medium-severity fixes needed for provider unavailability UX:
+
+1. ModelSelector: Show "No providers available" disabled state when availableProviders is empty.
+   - File: src/components/chat/ModelSelector.tsx
+   - Issue: When no providers are available, the dropdown trigger still shows "OpenAI / GPT-4o" from the hardcoded initial state. All items in the dropdown are greyed out, but the trigger gives no indication.
+   - Fix: Before rendering the normal dropdown, check if `availableProviders.length === 0`. If so, render the trigger button in a disabled state with text like "No providers available" and do not open the dropdown.
+
+2. UIProvider: Clear selected model when no providers are available.
+   - File: src/components/providers/UIProvider.tsx, lines 67-76
+   - Issue: `refreshProviders` only updates the selected model when `providers.length > 0`. When the list is empty, selectedProvider stays as "openai" and selectedModel stays as "gpt-4o".
+   - Fix: Add an `else` branch: when `providers.length === 0`, dispatch `SET_SELECTED_MODEL` with empty/sentinel values (e.g., `{ provider: "", model: "" }`) so downstream components know nothing is available.
+
+3. ChatInput: Disable send when selected provider is unavailable.
+   - File: src/components/chat/ChatInput.tsx (and/or src/app/(protected)/chat/[conversationId]/page.tsx)
+   - Issue: The send button's `disabled` prop is only tied to `isLoading`. A user can type and send a message with an unavailable provider, resulting in a 422 error.
+   - Fix: Pass `availableProviders` to ChatInput (or derive from context). Disable the send button when the currently selected provider is not in `availableProviders`. The chat page already has `availableProviders` — thread it through to the disabled condition.

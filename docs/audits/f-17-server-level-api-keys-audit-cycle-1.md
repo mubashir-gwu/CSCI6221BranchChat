@@ -52,7 +52,7 @@ Tasks covered: T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-084, T-085, T-
 - **PASS:** ModelSelector receives `availableProviders` prop and gates provider selection.
 - **PASS:** Unavailable providers rendered with `disabled={!enabled}`, `text-muted-foreground` styling, and `"(not available)"` label.
 - **PASS:** Available providers are selectable and trigger `onChange`.
-- **PARTIAL:** No explicit "No providers available" message when `availableProviders` is empty. All providers render as disabled, which is functionally equivalent but lacks the specified message text.
+- **FAIL:** No explicit "No providers available" message when `availableProviders` is empty. When no providers are available, the trigger button still displays "OpenAI / GPT-4o" (the hardcoded initial state from UIProvider), misleading the user into thinking a provider is selected. Additionally, the send button in ChatInput is not disabled when the selected model is unavailable — the user can attempt to send, only to get a 422 error from the server.
 - **PASS:** `npm run build` passes.
 
 ### T-083: Update Import to Default to Available Provider
@@ -94,15 +94,26 @@ Tasks covered: T-077, T-078, T-079, T-080, T-081, T-082, T-083, T-084, T-085, T-
 
 ## Bug Detection
 
-No bugs found. Code review of all source files for F-17 reveals:
+1. **Unavailable model remains selected when no providers are available.** Severity: **Medium.**
+   - **File:** `src/components/providers/UIProvider.tsx`, lines 67-76.
+   - **Description:** `refreshProviders` only switches the selected model when `providers.length > 0`. When the available providers list is empty, the state stays at `selectedProvider: "openai"`, `selectedModel: "gpt-4o"` — the hardcoded `initialState`. The ModelSelector trigger button then displays "OpenAI / GPT-4o" as if it's a valid selection, even though the provider is unavailable.
+   - **Impact:** User sees a confidently-selected model that can't be used. Sending a message results in a 422 error from the server with no prior warning.
 
-1. **Token tracking guard condition** (`llm/chat/route.ts:148`): `if (llmResponse.inputTokens || llmResponse.outputTokens)` — this would skip tracking if both values are exactly `0`. However, for a real LLM call that returns `0` tokens (impossible in practice since every call consumes at least 1 token), `callCount` wouldn't increment. Severity: **Low** — purely theoretical edge case. All real providers return non-zero token counts.
+2. **ChatInput send button not disabled when selected model is unavailable.** Severity: **Medium.**
+   - **File:** `src/components/chat/ChatInput.tsx` (and `src/app/(protected)/chat/[conversationId]/page.tsx`).
+   - **Description:** The `disabled` prop on ChatInput is only tied to `uiState.isLoading`. There is no check that the currently selected provider is actually available. The user can compose and send a message with an unavailable provider, only to receive a 422 error after the round-trip.
 
-2. All promise rejections are handled with try/catch blocks.
-3. No data model mismatches — all Mongoose schema fields align with the TypeScript interfaces.
-4. API contracts match CLAUDE.md spec for request/response shapes.
-5. No missing null/undefined checks on critical paths.
-6. No stale closures — UIProvider correctly uses `useRef` pattern for `selectedProviderRef` to avoid stale state in `refreshProviders` callback.
+3. **ModelSelector shows no empty state message.** Severity: **Medium.**
+   - **File:** `src/components/chat/ModelSelector.tsx`.
+   - **Description:** T-082 requires "If no providers available, show disabled state with message 'No providers available'." The component renders all providers as disabled but does not show an explicit message or disable the dropdown trigger itself.
+
+4. **Token tracking guard condition** (`llm/chat/route.ts:148`): `if (llmResponse.inputTokens || llmResponse.outputTokens)` — this would skip tracking if both values are exactly `0`. However, for a real LLM call that returns `0` tokens (impossible in practice since every call consumes at least 1 token), `callCount` wouldn't increment. Severity: **Low** — purely theoretical edge case. All real providers return non-zero token counts.
+
+5. All promise rejections are handled with try/catch blocks.
+6. No data model mismatches — all Mongoose schema fields align with the TypeScript interfaces.
+7. API contracts match CLAUDE.md spec for request/response shapes.
+8. No missing null/undefined checks on critical paths.
+9. No stale closures — UIProvider correctly uses `useRef` pattern for `selectedProviderRef` to avoid stale state in `refreshProviders` callback.
 
 ## Security
 
@@ -179,6 +190,9 @@ No security issues found.
 
 ## Summary
 - Critical issues: 0
-- Medium issues: 0
-- Low issues: 1 (ModelSelector missing explicit "No providers available" message text — T-082)
-- Recommendation: **PROCEED**
+- Medium issues: 3
+  1. Unavailable model remains selected in UIProvider when no providers are available (UIProvider.tsx)
+  2. ChatInput send button not disabled when selected model is unavailable (ChatInput.tsx / chat page)
+  3. ModelSelector shows no empty state message when all providers are unavailable (ModelSelector.tsx)
+- Low issues: 1 (token tracking guard skips callCount when both token values are 0)
+- Recommendation: **FIX FIRST**

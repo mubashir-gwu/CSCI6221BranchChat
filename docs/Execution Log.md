@@ -741,3 +741,28 @@ Updated the Gemini model entry in:
 - Updated `__tests__/components/TreeVisualization.test.tsx` with 2 new tests: MiniMap renders when visible, MiniMap hidden when not visible
 - Added `useUI` mock and updated ReactFlow mock to pass through children
 - All 11 tests in these files pass, build passes
+
+## F-16: Theme Switching
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-074: Install next-themes and Configure ThemeProvider
+- `next-themes` was already installed; added `ThemeProvider` wrapper in root layout (`layout.tsx`)
+- Added `suppressHydrationWarning` to `<html>` tag
+- Fixed `@custom-variant dark` to use `(&:where(.dark, .dark *))` per CLAUDE.md spec
+- Dark mode CSS variables already present in `globals.css`
+- Build passes, no hydration errors
+
+### T-075: Create ThemeToggle Component
+- Created `src/components/common/ThemeToggle.tsx` with shadcn DropdownMenu
+- Three options: Light (Sun icon), Dark (Moon icon), System (Monitor icon)
+- Uses `useTheme()` from `next-themes`
+- Placed in protected layout sidebar header alongside BranchChat title
+- Build passes
+
+### T-076: Write Tests for ThemeToggle Component
+- Created `__tests__/components/ThemeToggle.test.tsx` with 5 tests
+- Tests: renders without crashing, shows three options, calls setTheme for dark/light/system
+- Mocks `next-themes` `useTheme` hook
+- All 135 tests pass (15 files), build passes

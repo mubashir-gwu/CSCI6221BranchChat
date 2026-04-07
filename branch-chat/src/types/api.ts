@@ -78,21 +78,6 @@ export interface LLMChatResponse {
   assistantNode: NodeResponse;
 }
 
-// API Keys
-export interface ApiKeyInfo {
-  provider: string;
-  maskedKey: string;
-  updatedAt: string;
-}
-
-export interface ApiKeyListResponse {
-  keys: ApiKeyInfo[];
-}
-
-export interface SetApiKeyRequest {
-  apiKey: string;
-}
-
 // Import
 export interface ImportRequest {
   jsonData: import('./export').ExportedTree;

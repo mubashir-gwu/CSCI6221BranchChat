@@ -26,13 +26,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
             <ConversationList />
           </div>
           <div className="border-t p-2 space-y-1">
-            <Link href="/settings">
+            <Link href="/usage">
               <Button
                 variant="ghost"
                 size="sm"
                 className="w-full justify-start"
               >
-                Settings
+                Usage
               </Button>
             </Link>
             <Button

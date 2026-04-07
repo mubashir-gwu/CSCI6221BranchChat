@@ -6,17 +6,6 @@ export interface DBUser {
   updatedAt: string;
 }
 
-export interface DBApiKey {
-  _id: string;
-  userId: string;
-  provider: 'openai' | 'anthropic' | 'gemini';
-  encryptedKey: string;
-  iv: string;
-  authTag: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface DBConversation {
   _id: string;
   userId: string;

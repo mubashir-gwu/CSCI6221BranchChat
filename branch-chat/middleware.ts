@@ -7,10 +7,8 @@ export const config = {
   matcher: [
     '/dashboard',
     '/chat/:path*',
-    '/settings',
     '/api/conversations/:path*',
     '/api/llm/:path*',
-    '/api/settings/:path*',
     '/api/import/:path*',
     '/api/providers/:path*',
     '/api/token-usage/:path*',

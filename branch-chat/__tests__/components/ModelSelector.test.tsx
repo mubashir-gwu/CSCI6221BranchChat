@@ -94,7 +94,7 @@ describe("ModelSelector", () => {
     });
   });
 
-  it("shows all providers but marks those without keys as disabled", () => {
+  it("shows all providers but marks unavailable ones as disabled", () => {
     render(
       <ModelSelector
         value={{ provider: "openai", model: "gpt-4o" }}
@@ -104,7 +104,37 @@ describe("ModelSelector", () => {
     );
 
     expect(screen.getByText("OpenAI")).toBeDefined();
-    // Providers without keys are shown but with "(no key)" label
-    expect(screen.getAllByText("(no key)").length).toBeGreaterThanOrEqual(2);
+    // Unavailable providers are shown but with "(not available)" label
+    expect(screen.getAllByText("(not available)").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("disables items for unavailable providers", () => {
+    render(
+      <ModelSelector
+        value={{ provider: "openai", model: "gpt-4o" }}
+        onChange={vi.fn()}
+        availableProviders={["openai"]}
+      />
+    );
+
+    const items = screen.getAllByTestId("dropdown-item");
+    // OpenAI items should be enabled, others disabled
+    const disabledItems = items.filter((item) => (item as HTMLButtonElement).disabled);
+    expect(disabledItems.length).toBeGreaterThan(0);
+  });
+
+  it("enables items for available providers", () => {
+    render(
+      <ModelSelector
+        value={{ provider: "openai", model: "gpt-4o" }}
+        onChange={vi.fn()}
+        availableProviders={["openai", "anthropic"]}
+      />
+    );
+
+    // OpenAI and Anthropic items should be selectable
+    const items = screen.getAllByTestId("dropdown-item");
+    const enabledItems = items.filter((item) => !(item as HTMLButtonElement).disabled);
+    expect(enabledItems.length).toBeGreaterThan(0);
   });
 });

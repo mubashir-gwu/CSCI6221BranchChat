@@ -11,9 +11,10 @@ vi.mock("@/lib/db", () => ({
   connectDB: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock encryption
-vi.mock("@/lib/encryption", () => ({
-  decrypt: vi.fn().mockReturnValue("sk-test-key-12345"),
+// Mock provider availability
+const mockIsProviderAvailable = vi.fn();
+vi.mock("@/lib/providers/availability", () => ({
+  isProviderAvailable: (...args: unknown[]) => mockIsProviderAvailable(...args),
 }));
 
 // Mock context builder
@@ -40,14 +41,6 @@ vi.mock("@/models/Conversation", () => ({
   },
 }));
 
-// Mock ApiKey model
-const mockApiKeyFindOne = vi.fn();
-vi.mock("@/models/ApiKey", () => ({
-  ApiKey: {
-    findOne: (...args: unknown[]) => mockApiKeyFindOne(...args),
-  },
-}));
-
 // Mock Node model
 const mockNodeFind = vi.fn();
 const mockNodeCreate = vi.fn();
@@ -57,6 +50,14 @@ vi.mock("@/models/Node", () => ({
     find: (...args: unknown[]) => mockNodeFind(...args),
     create: (...args: unknown[]) => mockNodeCreate(...args),
     deleteOne: (...args: unknown[]) => mockNodeDeleteOne(...args),
+  },
+}));
+
+// Mock TokenUsage model
+const mockTokenUsageFindOneAndUpdate = vi.fn();
+vi.mock("@/models/TokenUsage", () => ({
+  TokenUsage: {
+    findOneAndUpdate: (...args: unknown[]) => mockTokenUsageFindOneAndUpdate(...args),
   },
 }));
 
@@ -115,13 +116,7 @@ beforeEach(() => {
   // Default mock setup for successful flow
   mockAuth.mockResolvedValue(mockSession);
   mockConversationFindById.mockResolvedValue(mockConversation);
-  mockApiKeyFindOne.mockReturnValue({
-    lean: () => ({
-      encryptedKey: "enc",
-      iv: "iv",
-      authTag: "tag",
-    }),
-  });
+  mockIsProviderAvailable.mockReturnValue(true);
   mockNodeFind.mockReturnValue({
     lean: () => [
       {
@@ -144,7 +139,10 @@ beforeEach(() => {
     content: "I'm doing well!",
     model: "gpt-4o",
     provider: "openai",
+    inputTokens: 10,
+    outputTokens: 20,
   });
+  mockTokenUsageFindOneAndUpdate.mockResolvedValue({});
 
   let createCallCount = 0;
   mockNodeCreate.mockImplementation((data: Record<string, unknown>) => {
@@ -201,16 +199,14 @@ describe("POST /api/llm/chat", () => {
     expect(res.status).toBe(403);
   });
 
-  it("should return 422 when no API key found for provider", async () => {
-    mockApiKeyFindOne.mockReturnValue({
-      lean: () => null,
-    });
+  it("should return 422 when provider is not available", async () => {
+    mockIsProviderAvailable.mockReturnValue(false);
 
     const res = await POST(makeRequest(validBody));
     const data = await res.json();
 
     expect(res.status).toBe(422);
-    expect(data.error).toBe("No API key found for openai.");
+    expect(data.error).toContain("not configured");
   });
 
   it("should return 201 with userNode and assistantNode on success", async () => {
@@ -225,6 +221,29 @@ describe("POST /api/llm/chat", () => {
     expect(data.userNode.provider).toBeNull();
     expect(data.assistantNode.provider).toBe("openai");
     expect(data.assistantNode.model).toBe("gpt-4o");
+  });
+
+  it("should record token usage after successful call", async () => {
+    await POST(makeRequest(validBody));
+
+    expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
+      { userId: "user-1", provider: "openai" },
+      {
+        $inc: {
+          inputTokens: 10,
+          outputTokens: 20,
+          callCount: 1,
+        },
+      },
+      { upsert: true }
+    );
+  });
+
+  it("should still return 201 even if token tracking fails", async () => {
+    mockTokenUsageFindOneAndUpdate.mockRejectedValue(new Error("DB error"));
+
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(201);
   });
 
   it("should set rootNodeId when parentNodeId is null (first message)", async () => {
@@ -257,8 +276,7 @@ describe("POST /api/llm/chat", () => {
     );
   });
 
-  it("should work with mock provider without API key", async () => {
-    // Mock provider requires no API key
+  it("should work with mock provider in development", async () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "development";
 
@@ -271,8 +289,6 @@ describe("POST /api/llm/chat", () => {
     );
 
     expect(res.status).toBe(201);
-    // ApiKey.findOne should NOT have been called for mock
-    expect(mockApiKeyFindOne).not.toHaveBeenCalled();
 
     process.env.NODE_ENV = originalEnv;
   });

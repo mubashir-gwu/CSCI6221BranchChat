@@ -323,6 +323,165 @@ describe("POST /api/llm/chat", () => {
     expect(data.error).toBe("openai API error");
   });
 
+  describe("auto-title generation", () => {
+    it("should trigger title generation when conversation title is 'New Conversation'", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "New Conversation",
+      });
+
+      // sendMessage will be called twice: once for chat, once for title
+      mockSendMessage
+        .mockResolvedValueOnce({
+          content: "I'm doing well!",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 10,
+          outputTokens: 20,
+        })
+        .mockResolvedValueOnce({
+          content: "Greeting Exchange",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 5,
+          outputTokens: 3,
+        });
+
+      const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      expect(res.status).toBe(201);
+
+      // Wait for fire-and-forget to complete
+      await vi.waitFor(() => {
+        // Title update call (second call after rootNodeId update)
+        const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
+          (call: unknown[]) => {
+            const update = call[1] as Record<string, unknown>;
+            return typeof update.title === "string";
+          }
+        );
+        expect(titleUpdateCalls.length).toBe(1);
+        expect(titleUpdateCalls[0][1]).toEqual({ title: "Greeting Exchange" });
+      });
+    });
+
+    it("should NOT trigger title generation when title is not 'New Conversation'", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "Existing Title",
+      });
+
+      const res = await POST(makeRequest(validBody));
+      expect(res.status).toBe(201);
+
+      // sendMessage should only be called once (for the chat itself)
+      expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not affect the main response if title generation fails", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "New Conversation",
+      });
+
+      mockSendMessage
+        .mockResolvedValueOnce({
+          content: "I'm doing well!",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 10,
+          outputTokens: 20,
+        })
+        .mockRejectedValueOnce(new Error("Title generation failed"));
+
+      const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      const data = await res.json();
+
+      expect(res.status).toBe(201);
+      expect(data.userNode).toBeDefined();
+      expect(data.assistantNode).toBeDefined();
+    });
+
+    it("should track token usage for the title generation call", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "New Conversation",
+      });
+
+      mockSendMessage
+        .mockResolvedValueOnce({
+          content: "I'm doing well!",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 10,
+          outputTokens: 20,
+        })
+        .mockResolvedValueOnce({
+          content: "Greeting Exchange",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 5,
+          outputTokens: 3,
+        });
+
+      await POST(makeRequest({ ...validBody, parentNodeId: null }));
+
+      // Wait for fire-and-forget to complete
+      await vi.waitFor(() => {
+        // Token usage should be tracked twice: once for chat, once for title
+        expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledTimes(2);
+        // Second call should be for title generation tokens
+        expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
+          { userId: "user-1", provider: "openai" },
+          {
+            $inc: {
+              inputTokens: 5,
+              outputTokens: 3,
+              callCount: 1,
+            },
+          },
+          { upsert: true }
+        );
+      });
+    });
+
+    it("should truncate title to 200 characters", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "New Conversation",
+      });
+
+      const longTitle = "A".repeat(300);
+      mockSendMessage
+        .mockResolvedValueOnce({
+          content: "I'm doing well!",
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 10,
+          outputTokens: 20,
+        })
+        .mockResolvedValueOnce({
+          content: longTitle,
+          model: "gpt-4o",
+          provider: "openai",
+          inputTokens: 5,
+          outputTokens: 3,
+        });
+
+      await POST(makeRequest({ ...validBody, parentNodeId: null }));
+
+      await vi.waitFor(() => {
+        const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
+          (call: unknown[]) => {
+            const update = call[1] as Record<string, unknown>;
+            return typeof update.title === "string";
+          }
+        );
+        expect(titleUpdateCalls.length).toBe(1);
+        expect((titleUpdateCalls[0][1] as Record<string, string>).title.length).toBe(200);
+      });
+    });
+  });
+
   it("should delete user node on LLM failure to prevent orphans", async () => {
     mockSendMessage.mockRejectedValue(new Error("LLM failed"));
 

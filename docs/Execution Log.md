@@ -712,3 +712,32 @@ Updated the Gemini model entry in:
 - Added test: user node click does NOT call `onNodeClick` in `TreeVisualization.test.tsx`
 - Added test: delete button renders for user messages only in `ChatPanel.test.tsx`
 - All 124 tests pass, build passes
+
+---
+
+## F-15: Branch from Bubble & Minimap Toggle
+
+**Status:** Complete  
+**Date:** 2026-04-07
+
+### T-071: Add "New Branch from Here" to BranchMenu
+- Added `onNavigateToNode` prop to `BranchMenu`, `ChatMessage`, and `ChatPanel`
+- BranchMenu renders a "+ New branch from here" option at the bottom, separated by a divider
+- Clicking it calls `handleTreeNodeClick` which sets the parent assistant node as `activeNodeId`, allowing the user to type a new branch
+- Existing branch navigation options still work
+- Build passes
+
+### T-072: Add Minimap Toggle to Tree Sidebar
+- Added `isMinimapVisible: boolean` (default `true`) to `UIState` in `UIContext.ts`
+- Added `TOGGLE_MINIMAP` action to reducer in `UIProvider.tsx`
+- Exposed `isMinimapVisible` and `toggleMinimap` convenience function from `useUI` hook
+- Added Eye/EyeOff toggle button in `TreeSidebar.tsx` header next to "Tree View" label
+- `TreeVisualization.tsx` conditionally renders `<MiniMap>` based on `isMinimapVisible`
+- Session-only preference (resets on reload)
+- Build passes
+
+### T-073: Write Tests for Branch from Bubble and Minimap Toggle
+- Created `__tests__/components/BranchMenu.test.tsx` with 4 tests: renders option, hides when no callback, calls navigate with parentNodeId, existing options still work
+- Updated `__tests__/components/TreeVisualization.test.tsx` with 2 new tests: MiniMap renders when visible, MiniMap hidden when not visible
+- Added `useUI` mock and updated ReactFlow mock to pass through children
+- All 11 tests in these files pass, build passes

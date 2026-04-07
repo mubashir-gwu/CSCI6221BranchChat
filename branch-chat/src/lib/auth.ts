@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import { authConfig } from './auth.config';
+import { logger } from '@/lib/logger';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -16,11 +17,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        const email = (credentials.email as string).toLowerCase();
+        logger.info('Auth: login attempt', { email });
         await connectDB();
-        const user = await User.findOne({ email: (credentials.email as string).toLowerCase() });
-        if (!user) return null;
+        const user = await User.findOne({ email });
+        if (!user) {
+          logger.warn('Auth: login failed', { email, reason: 'user not found' });
+          return null;
+        }
         const isValid = await bcrypt.compare(credentials.password as string, user.hashedPassword);
-        if (!isValid) return null;
+        if (!isValid) {
+          logger.warn('Auth: login failed', { email, reason: 'invalid password' });
+          return null;
+        }
+        logger.info('Auth: login success', { userId: user._id.toString(), email });
         return { id: user._id.toString(), email: user.email };
       },
     }),

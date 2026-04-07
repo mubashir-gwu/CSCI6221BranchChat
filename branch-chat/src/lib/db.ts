@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logger } from '@/lib/logger';
 
 function getMongoURI(): string {
   const uri = process.env.MONGODB_URI;
@@ -12,12 +13,16 @@ if (!cached) cached = (global as any).mongoose = { conn: null, promise: null };
 export async function connectDB() {
   if (cached.conn) return cached.conn;
   if (!cached.promise) {
-    cached.promise = mongoose.connect(getMongoURI());
+    const uri = getMongoURI();
+    logger.info('Database: connecting', { uri: uri.replace(/\/\/.*@/, '//***@') });
+    cached.promise = mongoose.connect(uri);
   }
   try {
     cached.conn = await cached.promise;
-  } catch (err) {
+    logger.info('Database: connected');
+  } catch (err: any) {
     cached.promise = null;
+    logger.error('Database: connection failed', { error: err?.message });
     throw err;
   }
   return cached.conn;

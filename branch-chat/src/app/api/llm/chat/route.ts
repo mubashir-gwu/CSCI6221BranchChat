@@ -23,6 +23,7 @@ async function generateTitle(
   model: string,
   userId: string
 ): Promise<string | null> {
+  logger.info("Auto-title: generating", { context: { conversationId } });
   const llmProvider = getProvider(provider);
   const titleMessages: LLMMessage[] = [
     {
@@ -52,6 +53,7 @@ async function generateTitle(
     );
   }
 
+  logger.info("Auto-title: success", { context: { conversationId }, title });
   return title;
 }
 
@@ -222,8 +224,8 @@ export async function POST(request: Request) {
             model,
             session.user.id
           );
-        } catch {
-          // Title generation failure is non-critical — title stays "New Conversation"
+        } catch (titleErr: any) {
+          logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
         }
       }
 

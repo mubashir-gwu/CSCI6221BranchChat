@@ -318,14 +318,14 @@ All conversation CRUD, node CRUD, export, import, and auth endpoints remain unch
 
 - **File:** `src/components/tree/TreeSidebar.tsx`
 - **Changes:**
-  - Add a minimap toggle button (Eye/EyeOff icon) in the sidebar header.
-  - Reads/writes `isMinimapVisible` from UIContext.
+  - No minimap toggle here (moved to TreeVisualization Controls toolbar for better UX).
 
 ### 5.9 Modified: TreeVisualization
 
 - **File:** `src/components/tree/TreeVisualization.tsx`
 - **Changes:**
   - Conditionally render `<MiniMap>` based on `isMinimapVisible` from UIContext.
+  - Add minimap toggle as a `<ControlButton>` inside the ReactFlow `<Controls>` toolbar (Map/MapMinus icon from lucide-react). Reads/writes `isMinimapVisible` from UIContext.
 
 ### 5.10 New: Usage page
 

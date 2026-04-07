@@ -43,7 +43,8 @@ vi.mock("@xyflow/react", () => {
         {children}
       </div>
     ),
-    Controls: () => <div data-testid="controls" />,
+    Controls: ({ children }: { children?: React.ReactNode }) => <div data-testid="controls">{children}</div>,
+    ControlButton: ({ children, onClick, ...props }: { children?: React.ReactNode; onClick?: () => void; [key: string]: unknown }) => <button data-testid="control-button" onClick={onClick} {...props}>{children}</button>,
     MiniMap: () => <div data-testid="minimap" />,
     Handle: () => null,
     Position: { Top: "top", Bottom: "bottom" },

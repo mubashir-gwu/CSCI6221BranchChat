@@ -420,8 +420,8 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **ModelSelector**     | `value`, `onChange`, `availableProviders`                  | shadcn DropdownMenu, provider-grouped, color-coded. Unavailable providers greyed out (`opacity-50 pointer-events-none`). |
 | **BranchIndicator**   | `nodeId`, `branchCount`, `onClick`                         | Badge. Click → BranchMenu.                                      |
 | **BranchMenu**        | `parentNodeId`, `children[]`, `activeChildId`, `onSelect`  | Sibling list with preview + color. "New branch from here" option at bottom. |
-| **TreeSidebar**       | `isOpen`, `onToggle`                                       | Toggle visible. TreeVisualization when open. Minimap toggle button (Eye/EyeOff). |
-| **TreeVisualization** | `nodes`, `childrenMap`, `activeNodeId`, `onNodeClick`      | `<ReactFlow>` from `@xyflow/react`. Conditionally renders `<MiniMap>` based on `isMinimapVisible`. Styles in globals.css. |
+| **TreeSidebar**       | `isOpen`, `onToggle`                                       | Toggle visible. TreeVisualization when open. |
+| **TreeVisualization** | `nodes`, `childrenMap`, `activeNodeId`, `onNodeClick`      | `<ReactFlow>` from `@xyflow/react`. Conditionally renders `<MiniMap>` based on `isMinimapVisible`. Minimap toggle as `<ControlButton>` in ReactFlow Controls toolbar (Map/MapMinus icon). Styles in globals.css. |
 | **TreeNode**          | `{ label, role, provider, isActive, hasMultipleChildren }` | Colored box. Provider dot. Active ring. No connection handles. Only assistant nodes are clickable. |
 | **ThemeToggle**       | none                                                       | Cycle button: light → dark → system (Sun/Moon/Monitor icons). Uses `useTheme()` from `next-themes`. |
 | **TokenUsageCard**    | none (fetches from `/api/token-usage` internally)          | Table/card showing per-provider token usage (input, output, total calls). |

@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { ReactFlow, Controls, MiniMap, type NodeMouseHandler } from '@xyflow/react';
+import { ReactFlow, Controls, ControlButton, MiniMap, type NodeMouseHandler } from '@xyflow/react';
+import { Map, MapMinus } from 'lucide-react';
 import TreeNodeComponent from './TreeNode';
 import { useTreeLayout } from '@/hooks/useTreeLayout';
 import { useUI } from '@/hooks/useUI';
@@ -24,7 +25,7 @@ export default function TreeVisualization({
   onNodeClick,
 }: TreeVisualizationProps) {
   const { rfNodes, rfEdges } = useTreeLayout(nodes, childrenMap, activeNodeId);
-  const { isMinimapVisible } = useUI();
+  const { isMinimapVisible, toggleMinimap } = useUI();
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -62,7 +63,14 @@ export default function TreeVisualization({
       proOptions={{ hideAttribution: true }}
       aria-label="Conversation tree visualization"
     >
-      <Controls showInteractive={false} />
+      <Controls showInteractive={false}>
+        <ControlButton
+          onClick={toggleMinimap}
+          aria-label={isMinimapVisible ? 'Hide minimap' : 'Show minimap'}
+        >
+          {isMinimapVisible ? <Map className="h-3.5 w-3.5" /> : <MapMinus className="h-3.5 w-3.5" />}
+        </ControlButton>
+      </Controls>
       {isMinimapVisible && (
         <MiniMap
           nodeStrokeWidth={3}

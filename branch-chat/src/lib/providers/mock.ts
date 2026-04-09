@@ -38,6 +38,18 @@ export const mockProvider: LLMProvider = {
     _messages: LLMMessage[],
     _model: string,
   ): AsyncGenerator<StreamChunk> {
-    throw new Error('Not implemented');
+    const inputLength = _messages.reduce((sum, m) => sum + m.content.length, 0);
+
+    for (const char of MOCK_RESPONSE) {
+      await new Promise((r) => setTimeout(r, 10));
+      yield { type: 'token', content: char };
+    }
+
+    yield {
+      type: 'done',
+      content: MOCK_RESPONSE,
+      inputTokens: Math.ceil(inputLength / 4),
+      outputTokens: Math.ceil(MOCK_RESPONSE.length / 4),
+    };
   },
 };

@@ -419,6 +419,83 @@ describe("POST /api/import", () => {
   });
 });
 
+// ─── ATTACHMENT TESTS ─────────────────────────────────────────────────────────
+
+describe("export/import with attachments", () => {
+  const mockAttachment = {
+    filename: "test.png",
+    mimeType: "image/png",
+    data: "iVBORw0KGgoAAAANSUhEUg==",
+    size: 1024,
+  };
+
+  const mockNodesWithAttachments = [
+    {
+      _id: { toString: () => "node-root" },
+      conversationId: { toString: () => "conv-1" },
+      parentId: null,
+      role: "user",
+      content: "See this image",
+      provider: null,
+      model: null,
+      attachments: [mockAttachment],
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+    },
+    {
+      _id: { toString: () => "node-1" },
+      conversationId: { toString: () => "conv-1" },
+      parentId: { toString: () => "node-root" },
+      role: "assistant",
+      content: "Nice image!",
+      provider: "openai",
+      model: "gpt-4o",
+      createdAt: new Date("2026-01-01T00:01:00Z"),
+    },
+  ];
+
+  it("export includes attachments on nodes that have them", async () => {
+    mockAuth.mockResolvedValue(mockSession);
+    mockConversationFindOne.mockResolvedValue(mockConversation);
+    mockNodeFind.mockReturnValue({ lean: vi.fn().mockResolvedValue(mockNodesWithAttachments) });
+
+    const req = makeExportRequest("conv-1");
+    const res = await GET(req as any, makeParams("conv-1") as any);
+    expect(res.status).toBe(200);
+
+    const data: ExportedTree = await res.json();
+    const userNode = data.nodes.find((n) => n.content === "See this image")!;
+    expect(userNode.attachments).toBeDefined();
+    expect(userNode.attachments).toHaveLength(1);
+    expect(userNode.attachments![0].filename).toBe("test.png");
+
+    const assistantNode = data.nodes.find((n) => n.role === "assistant")!;
+    expect(assistantNode.attachments).toBeUndefined();
+  });
+
+  it("import restores attachments onto nodes", async () => {
+    mockAuth.mockResolvedValue(mockSession);
+    const createdConv = {
+      _id: { toString: () => "new-conv-1" },
+      title: "Test Conversation",
+    };
+    mockConversationCreate.mockResolvedValue(createdConv);
+    mockNodeInsertMany.mockResolvedValue([]);
+
+    const tree = validExportedTree();
+    tree.nodes[1].attachments = [mockAttachment];
+
+    const req = makeImportRequest({ jsonData: tree });
+    const res = await POST(req as any);
+    expect(res.status).toBe(201);
+
+    const insertedNodes = mockNodeInsertMany.mock.calls[0][0];
+    const nodeWithAttachment = insertedNodes.find((n: any) => n.content === "Hello");
+    expect(nodeWithAttachment.attachments).toBeDefined();
+    expect(nodeWithAttachment.attachments).toHaveLength(1);
+    expect(nodeWithAttachment.attachments[0].filename).toBe("test.png");
+  });
+});
+
 // ─── ROUND-TRIP TEST ─────────────────────────────────────────────────────────
 
 describe("Round-trip: export → import → export", () => {

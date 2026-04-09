@@ -314,7 +314,8 @@ describe("POST /api/llm/chat", () => {
       "node-1",
       "Hello, how are you?",
       expect.any(Map),
-      128000 // gpt-4o context window
+      128000, // gpt-4o context window
+      undefined, // no attachments
     );
   });
 
@@ -468,5 +469,99 @@ describe("POST /api/llm/chat", () => {
   it("should have dynamic export set to force-dynamic", async () => {
     const routeModule = await import("@/app/api/llm/chat/route");
     expect((routeModule as any).dynamic).toBe("force-dynamic");
+  });
+
+  // ─── FILE ATTACHMENT TESTS ──────────────────────────────────────────────────
+
+  describe("file attachment validation", () => {
+    const validAttachment = {
+      filename: "test.png",
+      mimeType: "image/png",
+      data: "iVBORw0KGgoAAAANSUhEUg==",
+      size: 1024,
+    };
+
+    it("should save attachments on user node when valid", async () => {
+      const body = {
+        ...validBody,
+        attachments: [validAttachment],
+      };
+
+      const res = await POST(makeRequest(body));
+      const events = await collectSSEEvents(res);
+      const doneEvents = events.filter((e) => e.event === "done");
+      expect(doneEvents.length).toBe(1);
+
+      // Node.create should have been called with attachments for the user node
+      const userNodeCall = mockNodeCreate.mock.calls[0][0];
+      expect(userNodeCall.attachments).toBeDefined();
+      expect(userNodeCall.attachments).toHaveLength(1);
+      expect(userNodeCall.attachments[0].filename).toBe("test.png");
+    });
+
+    it("should return 400 when file count exceeds 5", async () => {
+      const attachments = Array.from({ length: 6 }, (_, i) => ({
+        ...validAttachment,
+        filename: `file-${i}.png`,
+      }));
+
+      const res = await POST(makeRequest({ ...validBody, attachments }));
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("5 files");
+    });
+
+    it("should return 400 when a single file exceeds 5MB", async () => {
+      const attachments = [{
+        ...validAttachment,
+        size: 6 * 1024 * 1024,
+      }];
+
+      const res = await POST(makeRequest({ ...validBody, attachments }));
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("5MB");
+    });
+
+    it("should return 400 when total size exceeds 10MB", async () => {
+      const attachments = Array.from({ length: 3 }, (_, i) => ({
+        ...validAttachment,
+        filename: `file-${i}.png`,
+        size: 4 * 1024 * 1024, // 4MB each = 12MB total
+      }));
+
+      const res = await POST(makeRequest({ ...validBody, attachments }));
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("10MB");
+    });
+
+    it("should return 400 for invalid MIME type", async () => {
+      const attachments = [{
+        ...validAttachment,
+        mimeType: "application/exe",
+      }];
+
+      const res = await POST(makeRequest({ ...validBody, attachments }));
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("not allowed");
+    });
+
+    it("should return 413 when body exceeds 20MB", async () => {
+      const req = new Request("http://localhost:3000/api/llm/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": String(25 * 1024 * 1024),
+        },
+        body: JSON.stringify(validBody),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(413);
+      const data = await res.json();
+      expect(data.error).toContain("too large");
+    });
   });
 });

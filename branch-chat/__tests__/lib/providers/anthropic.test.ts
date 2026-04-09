@@ -58,7 +58,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
         { role: 'user', content: 'Hello' },
       ];
 
-      await provider.sendMessage(messages, 'claude-sonnet-4-20250514');
+      await provider.sendMessage(messages, 'claude-sonnet-4-6');
 
       const args = capturedCreateArgs as Record<string, unknown>;
       expect(args.system).toEqual([
@@ -74,7 +74,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
         { role: 'user', content: 'How are you?' },
       ];
 
-      await provider.sendMessage(messages, 'claude-sonnet-4-20250514');
+      await provider.sendMessage(messages, 'claude-sonnet-4-6');
 
       const args = capturedCreateArgs as Record<string, unknown>;
       const msgs = args.messages as Array<{ role: string; content: unknown }>;
@@ -90,7 +90,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
         { role: 'user', content: 'Hello' },
       ];
 
-      await provider.sendMessage(messages, 'claude-sonnet-4-20250514');
+      await provider.sendMessage(messages, 'claude-sonnet-4-6');
 
       const args = capturedCreateArgs as Record<string, unknown>;
       expect(args.system).toBeUndefined();
@@ -105,7 +105,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
         { role: 'user', content: 'Bye' },
       ];
 
-      await provider.sendMessage(messages, 'claude-sonnet-4-20250514');
+      await provider.sendMessage(messages, 'claude-sonnet-4-6');
 
       const args = capturedCreateArgs as Record<string, unknown>;
 
@@ -137,7 +137,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
 
       // Consume the generator
       const chunks = [];
-      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-20250514')) {
+      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-6')) {
         chunks.push(chunk);
       }
 
@@ -156,7 +156,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
       ];
 
       const chunks = [];
-      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-20250514')) {
+      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-6')) {
         chunks.push(chunk);
       }
 
@@ -175,7 +175,7 @@ describe('Anthropic Provider — Prompt Caching', () => {
       ];
 
       const chunks = [];
-      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-20250514')) {
+      for await (const chunk of provider.streamMessage(messages, 'claude-sonnet-4-6')) {
         chunks.push(chunk);
       }
 

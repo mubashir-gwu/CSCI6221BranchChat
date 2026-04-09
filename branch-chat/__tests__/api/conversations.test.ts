@@ -134,7 +134,7 @@ describe("POST /api/conversations", () => {
     const req = makeRequest({
       title: "Test",
       defaultProvider: "openai",
-      defaultModel: "claude-sonnet-4-20250514",
+      defaultModel: "claude-sonnet-4-6",
     });
     const res = await POST(req);
     expect(res.status).toBe(400);

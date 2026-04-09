@@ -4,8 +4,9 @@ export const MODELS = {
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini', contextWindow: 128000 },
   ],
   anthropic: [
-    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', contextWindow: 200000 },
-    { id: 'claude-haiku-3-5-20241022', name: 'Claude 3.5 Haiku', contextWindow: 200000 },
+    { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', contextWindow: 200000 },
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', contextWindow: 200000 },
+    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', contextWindow: 200000 },
   ],
   gemini: [
     { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', contextWindow: 1048576 },

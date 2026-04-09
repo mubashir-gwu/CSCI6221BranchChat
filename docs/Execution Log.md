@@ -1077,3 +1077,68 @@ Updated the Gemini model entry in:
 - Verified no system cache_control when system prompt is absent
 - Verified exactly 2 breakpoints when system prompt is present
 - All 7 tests pass, `npm run build` passes
+
+## F-22: File Attachments
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### T-108: Add Attachment Schema to Node Model and Update Types
+- Added `attachments` subdocument array to Node schema with `_id: false`
+- Added `Attachment` interface to `Node.ts` and `DBAttachment` to `database.ts`
+- Added `attachments?` to `LLMChatRequest`, `NodeResponse`, and `ExportedTree` types
+- `npm run build` passes
+
+### T-109: Create Attachment Formatter Utility
+- Created `src/lib/providers/attachmentFormatter.ts`
+- Anthropic: images as `image` source, PDFs as `document` source, text files inline
+- OpenAI: images as `image_url`, PDFs as `file` with data URI, text files inline
+- Gemini: images/PDFs as `inlineData`, text files inline
+- Text files (text/plain, text/markdown, text/csv) decoded from base64 to UTF-8
+- `npm run build` passes
+
+### T-110: Update Context Builder to Include Attachments
+- Modified `contextBuilder.ts` to map node attachments to `LLMMessage.attachments`
+- Added attachment size to token estimation (`Math.ceil(size / 4)`)
+- New optional `newAttachments` parameter for current message attachments
+- `npm run build` passes
+
+### T-111: Add Attachment Validation and Integration in Chat Route
+- Added Content-Length check rejecting >20MB payloads (413)
+- Added attachment validation: max 5 files, 5MB per file, 10MB total, allowed MIME types
+- Attachments saved on user node, passed through context builder
+- Updated Anthropic provider: attachments as content blocks, cache_control applied AFTER
+- Updated OpenAI provider: multi-part content with attachment blocks
+- Updated Gemini provider: attachments in parts array for both chat and stream
+- `npm run build` passes
+
+### T-112: Update Mock Provider to Acknowledge Attachments
+- Mock now prepends "I see you've attached: [filenames]" to responses when attachments present
+- Works for both `sendMessage` and `streamMessage`
+- `npm run build` passes
+
+### T-113: Create FileUploadArea Component and Integrate into ChatInput
+- Created `FileUploadArea.tsx` with paperclip button, drag-and-drop, preview chips
+- Client-side validation: 5 files, 5MB per file, 10MB total, allowed extensions
+- Integrated into ChatInput with base64 encoding via `readAsDataURL`
+- Updated `handleSend` in chat page to pass attachments through streaming request
+- Updated `TreeNode` type and `nodeResponseToTreeNode` to include attachments
+- Updated GET nodes route to serialize attachments
+- `npm run build` passes
+
+### T-114: Update ChatMessage to Display Attachment Previews
+- Images: inline thumbnails clickable to open full size in new tab
+- PDFs: clickable chips with FileText icon opening in new tab
+- Text files: expandable chips showing decoded content on click
+- `npm run build` passes
+
+### T-115: Update Export and Import to Include Attachments
+- Export route includes `attachments` field on nodes that have them
+- Import route restores `attachments` onto nodes from imported JSON
+- `npm run build` passes
+
+### T-116: Write Tests for File Attachments
+- Added 6 attachment validation tests in `llm-chat.test.ts` (save, count, size, total, MIME, body size)
+- Added 2 export/import attachment tests in `import-export.test.ts`
+- Created `attachmentFormatter.test.ts` with 13 tests (Anthropic, OpenAI, Gemini, mock, text decoding)
+- All 186 tests pass across 19 files, `npm run build` passes

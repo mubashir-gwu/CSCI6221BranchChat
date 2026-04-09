@@ -988,3 +988,48 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - Logger tests (7/7) pass
+
+---
+
+## F-20: Streaming Responses
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### T-094: Add StreamChunk Type, streamMessage Interface, and SSE Stream Helpers
+- Added `StreamChunk` type (token/done/error variants) and `LLMAttachment` interface to `types.ts`
+- Added `streamMessage` method to `LLMProvider` interface
+- Created `streamHelpers.ts` with `encodeSSEEvent` and `createSSEStream`
+- Added stub `streamMessage` to all four providers
+
+### T-095–T-098: Implement streamMessage in All Providers
+- **Anthropic**: `client.messages.stream()`, `content_block_delta` events, `finalMessage()` for usage
+- **OpenAI**: `stream: true` + `stream_options: { include_usage: true }`, maps `prompt_tokens`/`completion_tokens`
+- **Gemini**: `ai.models.generateContentStream()`, `chunk.text` getter, `usageMetadata`. Required `await` on the call.
+- **Mock**: Character-by-character with 10ms delays, estimated tokens
+
+### T-099: Create SSE Test Helper
+- `__tests__/helpers/sseHelper.ts` with `collectSSEEvents()` function
+
+### T-100: Rewrite POST /api/llm/chat to Return SSE Stream
+- JSON response → SSE streaming; `export const dynamic = 'force-dynamic'`
+- Pre-stream validation returns JSON; stream sends token/done/error events
+- Orphan cleanup: pre-content → delete user node; post-content → save partial
+- Auto-title via `sendMessage` (non-streaming, fire-and-forget)
+
+### T-101: Rewrite LLM Chat Tests for SSE
+- 24 tests using `collectSSEEvents` helper, all passing
+
+### T-102: Create useStreamingChat Hook
+- Batched rendering at 50ms, AbortController cleanup, handles all error types
+
+### T-103–T-104: Update ChatPanel and ChatInput for Streaming
+- ChatPanel renders streaming message with pulsing cursor indicator
+- ChatInput shows stop button during streaming, disables input
+
+### T-105: Update Tests for Streaming
+- 3 new streaming tests in ChatPanel.test.tsx
+
+### Verification
+- `npm run build` passes
+- 158 tests across 17 files, all passing

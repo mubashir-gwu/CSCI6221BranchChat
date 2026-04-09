@@ -70,22 +70,20 @@ export default function ChatPanel({
             />
           );
         })}
-        {isStreaming && (
+        {isStreaming && streamingContent ? (
           <div className="flex justify-start mb-4">
             <div className="relative max-w-[80%] rounded-lg px-4 py-3 bg-muted border-l-4 border-l-muted-foreground/30">
-              {streamingContent ? (
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <p className="whitespace-pre-wrap">
-                    {streamingContent}
-                    <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
-                  </p>
-                </div>
-              ) : (
-                <LoadingIndicator />
-              )}
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <p className="whitespace-pre-wrap">
+                  {streamingContent}
+                  <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+                </p>
+              </div>
             </div>
           </div>
-        )}
+        ) : isStreaming ? (
+          <LoadingIndicator />
+        ) : null}
         {isLoading && !isStreaming && <LoadingIndicator />}
         <div ref={bottomRef} />
       </div>

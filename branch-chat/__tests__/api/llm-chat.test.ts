@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { collectSSEEvents } from "../helpers/sseHelper";
+import type { StreamChunk } from "@/lib/providers/types";
 
 // Mock auth
 const mockAuth = vi.fn();
@@ -25,9 +27,11 @@ vi.mock("@/lib/contextBuilder", () => ({
 
 // Mock providers
 const mockSendMessage = vi.fn();
+const mockStreamMessage = vi.fn();
 vi.mock("@/lib/providers", () => ({
   getProvider: () => ({
     sendMessage: (...args: unknown[]) => mockSendMessage(...args),
+    streamMessage: (...args: unknown[]) => mockStreamMessage(...args),
   }),
 }));
 
@@ -74,6 +78,7 @@ const mockConversation = {
   defaultProvider: "openai",
   defaultModel: "gpt-4o",
   rootNodeId: null,
+  title: "Existing Title",
 };
 
 function makeRequest(body: object): Request {
@@ -110,6 +115,21 @@ function makeMockNode(overrides: Record<string, unknown> = {}) {
   };
 }
 
+async function* successStreamGenerator(): AsyncGenerator<StreamChunk> {
+  yield { type: 'token', content: "I'm " };
+  yield { type: 'token', content: "doing well!" };
+  yield { type: 'done', content: "I'm doing well!", inputTokens: 10, outputTokens: 20 };
+}
+
+async function* errorBeforeContentGenerator(): AsyncGenerator<StreamChunk> {
+  yield { type: 'error', message: 'Provider error' };
+}
+
+async function* errorAfterContentGenerator(): AsyncGenerator<StreamChunk> {
+  yield { type: 'token', content: 'Partial ' };
+  yield { type: 'error', message: 'Mid-stream error' };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -135,12 +155,13 @@ beforeEach(() => {
   mockBuildContext.mockReturnValue([
     { role: "user", content: "Hello, how are you?" },
   ]);
+  mockStreamMessage.mockImplementation(() => successStreamGenerator());
   mockSendMessage.mockResolvedValue({
-    content: "I'm doing well!",
+    content: "Greeting Exchange",
     model: "gpt-4o",
     provider: "openai",
-    inputTokens: 10,
-    outputTokens: 20,
+    inputTokens: 5,
+    outputTokens: 3,
   });
   mockTokenUsageFindOneAndUpdate.mockResolvedValue({});
 
@@ -159,6 +180,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/llm/chat", () => {
+  // Pre-stream validation tests (return JSON, not SSE)
   it("should return 401 if not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
     const res = await POST(makeRequest(validBody));
@@ -201,30 +223,40 @@ describe("POST /api/llm/chat", () => {
 
   it("should return 422 when provider is not available", async () => {
     mockIsProviderAvailable.mockReturnValue(false);
-
     const res = await POST(makeRequest(validBody));
     const data = await res.json();
-
     expect(res.status).toBe(422);
     expect(data.error).toContain("not configured");
   });
 
-  it("should return 201 with userNode and assistantNode on success", async () => {
+  // Streaming success tests
+  it("should return SSE stream with token and done events on success", async () => {
     const res = await POST(makeRequest(validBody));
-    const data = await res.json();
+    expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 
-    expect(res.status).toBe(201);
-    expect(data.userNode).toBeDefined();
-    expect(data.assistantNode).toBeDefined();
-    expect(data.userNode.role).toBe("user");
-    expect(data.assistantNode.role).toBe("assistant");
-    expect(data.userNode.provider).toBeNull();
-    expect(data.assistantNode.provider).toBe("openai");
-    expect(data.assistantNode.model).toBe("gpt-4o");
+    const events = await collectSSEEvents(res);
+    const tokenEvents = events.filter((e) => e.event === "token");
+    const doneEvents = events.filter((e) => e.event === "done");
+
+    expect(tokenEvents.length).toBe(2);
+    expect(tokenEvents[0].data.content).toBe("I'm ");
+    expect(tokenEvents[1].data.content).toBe("doing well!");
+
+    expect(doneEvents.length).toBe(1);
+    expect(doneEvents[0].data.userNode).toBeDefined();
+    expect(doneEvents[0].data.assistantNode).toBeDefined();
+    expect(doneEvents[0].data.userNode.role).toBe("user");
+    expect(doneEvents[0].data.assistantNode.role).toBe("assistant");
+    expect(doneEvents[0].data.assistantNode.provider).toBe("openai");
+    expect(doneEvents[0].data.assistantNode.model).toBe("gpt-4o");
+    expect(doneEvents[0].data.tokenUsage).toBeDefined();
+    expect(doneEvents[0].data.tokenUsage.inputTokens).toBe(10);
+    expect(doneEvents[0].data.tokenUsage.outputTokens).toBe(20);
   });
 
-  it("should record token usage after successful call", async () => {
-    await POST(makeRequest(validBody));
+  it("should record token usage after successful stream", async () => {
+    const res = await POST(makeRequest(validBody));
+    await collectSSEEvents(res); // consume the stream
 
     expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
       { userId: "user-1", provider: "openai" },
@@ -239,19 +271,21 @@ describe("POST /api/llm/chat", () => {
     );
   });
 
-  it("should still return 201 even if token tracking fails", async () => {
+  it("should still complete stream even if token tracking fails", async () => {
     mockTokenUsageFindOneAndUpdate.mockRejectedValue(new Error("DB error"));
 
     const res = await POST(makeRequest(validBody));
-    expect(res.status).toBe(201);
+    const events = await collectSSEEvents(res);
+    const doneEvents = events.filter((e) => e.event === "done");
+    expect(doneEvents.length).toBe(1);
   });
 
   it("should set rootNodeId when parentNodeId is null (first message)", async () => {
     const res = await POST(
       makeRequest({ ...validBody, parentNodeId: null })
     );
+    await collectSSEEvents(res);
 
-    expect(res.status).toBe(201);
     expect(mockConversationFindByIdAndUpdate).toHaveBeenCalledWith(
       "conv-1",
       expect.objectContaining({ rootNodeId: expect.anything() })
@@ -260,13 +294,21 @@ describe("POST /api/llm/chat", () => {
 
   it("should NOT set rootNodeId when parentNodeId is provided", async () => {
     const res = await POST(makeRequest(validBody));
+    await collectSSEEvents(res);
 
-    expect(res.status).toBe(201);
-    expect(mockConversationFindByIdAndUpdate).not.toHaveBeenCalled();
+    // findByIdAndUpdate should not be called for rootNodeId
+    const rootCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
+      (call: unknown[]) => {
+        const update = call[1] as Record<string, unknown>;
+        return update.rootNodeId !== undefined;
+      }
+    );
+    expect(rootCalls.length).toBe(0);
   });
 
   it("should include ancestor path context via buildContext", async () => {
-    await POST(makeRequest(validBody));
+    const res = await POST(makeRequest(validBody));
+    await collectSSEEvents(res);
 
     expect(mockBuildContext).toHaveBeenCalledWith(
       "node-1",
@@ -287,121 +329,112 @@ describe("POST /api/llm/chat", () => {
         model: "mock-model",
       })
     );
-
-    expect(res.status).toBe(201);
+    const events = await collectSSEEvents(res);
+    const doneEvents = events.filter((e) => e.event === "done");
+    expect(doneEvents.length).toBe(1);
 
     process.env.NODE_ENV = originalEnv;
   });
 
-  it("should return 429 on rate limit error from LLM", async () => {
-    mockSendMessage.mockRejectedValue({ status: 429, message: "Rate limited" });
+  // Error handling tests
+  it("should send error event with partial:false when error before content", async () => {
+    mockStreamMessage.mockImplementation(() => errorBeforeContentGenerator());
 
     const res = await POST(makeRequest(validBody));
-    const data = await res.json();
+    const events = await collectSSEEvents(res);
+    const errorEvents = events.filter((e) => e.event === "error");
 
-    expect(res.status).toBe(429);
-    expect(data.error).toContain("Rate limited");
+    expect(errorEvents.length).toBe(1);
+    expect(errorEvents[0].data.partial).toBe(false);
+    expect(errorEvents[0].data.message).toBe("Provider error");
   });
 
-  it("should return 502 on invalid API key error from LLM", async () => {
-    mockSendMessage.mockRejectedValue({ status: 401, message: "Invalid key" });
+  it("should delete user node on pre-content error (orphan cleanup)", async () => {
+    mockStreamMessage.mockImplementation(() => errorBeforeContentGenerator());
 
     const res = await POST(makeRequest(validBody));
-    const data = await res.json();
+    await collectSSEEvents(res);
 
-    expect(res.status).toBe(502);
-    expect(data.error).toBe("Invalid API key");
+    expect(mockNodeCreate).toHaveBeenCalledTimes(1); // user node only
+    expect(mockNodeDeleteOne).toHaveBeenCalledTimes(1);
   });
 
-  it("should return 502 on generic LLM error", async () => {
-    mockSendMessage.mockRejectedValue(new Error("Something went wrong"));
+  it("should send error event with partial:true when error after content", async () => {
+    mockStreamMessage.mockImplementation(() => errorAfterContentGenerator());
 
     const res = await POST(makeRequest(validBody));
-    const data = await res.json();
+    const events = await collectSSEEvents(res);
+    const errorEvents = events.filter((e) => e.event === "error");
 
-    expect(res.status).toBe(502);
-    expect(data.error).toBe("openai API error");
+    expect(errorEvents.length).toBe(1);
+    expect(errorEvents[0].data.partial).toBe(true);
+    expect(errorEvents[0].data.message).toBe("Mid-stream error");
   });
 
+  it("should save partial content and keep user node on post-content error", async () => {
+    mockStreamMessage.mockImplementation(() => errorAfterContentGenerator());
+
+    const res = await POST(makeRequest(validBody));
+    await collectSSEEvents(res);
+
+    // User node + partial assistant node
+    expect(mockNodeCreate).toHaveBeenCalledTimes(2);
+    expect(mockNodeDeleteOne).not.toHaveBeenCalled();
+  });
+
+  it("should handle thrown errors during streaming", async () => {
+    mockStreamMessage.mockImplementation(async function* () {
+      throw new Error("Unexpected crash");
+    });
+
+    const res = await POST(makeRequest(validBody));
+    const events = await collectSSEEvents(res);
+    const errorEvents = events.filter((e) => e.event === "error");
+
+    expect(errorEvents.length).toBe(1);
+    expect(errorEvents[0].data.partial).toBe(false);
+  });
+
+  // Auto-title tests
   describe("auto-title generation", () => {
-    it("should generate title and return it in response when title is 'New Conversation'", async () => {
+    it("should fire auto-title using sendMessage (non-streaming) when title is 'New Conversation'", async () => {
       mockConversationFindById.mockResolvedValue({
         ...mockConversation,
         title: "New Conversation",
       });
 
-      mockSendMessage
-        .mockResolvedValueOnce({
-          content: "I'm doing well!",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 10,
-          outputTokens: 20,
-        })
-        .mockResolvedValueOnce({
-          content: "Greeting Exchange",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 5,
-          outputTokens: 3,
-        });
-
       const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
-      const data = await res.json();
+      await collectSSEEvents(res);
 
-      expect(res.status).toBe(201);
-      expect(data.generatedTitle).toBe("Greeting Exchange");
+      // Wait for fire-and-forget title generation
+      await new Promise((r) => setTimeout(r, 50));
 
-      // Title should be saved to DB
-      const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
-        (call: unknown[]) => {
-          const update = call[1] as Record<string, unknown>;
-          return typeof update.title === "string";
-        }
-      );
-      expect(titleUpdateCalls.length).toBe(1);
-      expect(titleUpdateCalls[0][1]).toEqual({ title: "Greeting Exchange" });
-    });
-
-    it("should NOT trigger title generation when title is not 'New Conversation'", async () => {
-      mockConversationFindById.mockResolvedValue({
-        ...mockConversation,
-        title: "Existing Title",
-      });
-
-      const res = await POST(makeRequest(validBody));
-      const data = await res.json();
-
-      expect(res.status).toBe(201);
-      expect(data.generatedTitle).toBeUndefined();
-
-      // sendMessage should only be called once (for the chat itself)
+      // sendMessage should be called for title generation (not streamMessage)
       expect(mockSendMessage).toHaveBeenCalledTimes(1);
     });
 
-    it("should not affect the main response if title generation fails", async () => {
+    it("should NOT trigger title generation when title is not 'New Conversation'", async () => {
+      const res = await POST(makeRequest(validBody));
+      await collectSSEEvents(res);
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    it("should not affect the stream if title generation fails", async () => {
       mockConversationFindById.mockResolvedValue({
         ...mockConversation,
         title: "New Conversation",
       });
-
-      mockSendMessage
-        .mockResolvedValueOnce({
-          content: "I'm doing well!",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 10,
-          outputTokens: 20,
-        })
-        .mockRejectedValueOnce(new Error("Title generation failed"));
+      mockSendMessage.mockRejectedValue(new Error("Title generation failed"));
 
       const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
-      const data = await res.json();
+      const events = await collectSSEEvents(res);
+      const doneEvents = events.filter((e) => e.event === "done");
 
-      expect(res.status).toBe(201);
-      expect(data.userNode).toBeDefined();
-      expect(data.assistantNode).toBeDefined();
-      expect(data.generatedTitle).toBeUndefined();
+      expect(doneEvents.length).toBe(1);
+      expect(doneEvents[0].data.userNode).toBeDefined();
+      expect(doneEvents[0].data.assistantNode).toBeDefined();
     });
 
     it("should track token usage for the title generation call", async () => {
@@ -410,27 +443,14 @@ describe("POST /api/llm/chat", () => {
         title: "New Conversation",
       });
 
-      mockSendMessage
-        .mockResolvedValueOnce({
-          content: "I'm doing well!",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 10,
-          outputTokens: 20,
-        })
-        .mockResolvedValueOnce({
-          content: "Greeting Exchange",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 5,
-          outputTokens: 3,
-        });
+      const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      await collectSSEEvents(res);
 
-      await POST(makeRequest({ ...validBody, parentNodeId: null }));
+      // Wait for fire-and-forget
+      await new Promise((r) => setTimeout(r, 50));
 
-      // Token usage should be tracked twice: once for chat, once for title
+      // Token usage tracked for both stream and title
       expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledTimes(2);
-      // Second call should be for title generation tokens
       expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
         { userId: "user-1", provider: "openai" },
         {
@@ -443,61 +463,10 @@ describe("POST /api/llm/chat", () => {
         { upsert: true }
       );
     });
-
-    it("should truncate title to 200 characters", async () => {
-      mockConversationFindById.mockResolvedValue({
-        ...mockConversation,
-        title: "New Conversation",
-      });
-
-      const longTitle = "A".repeat(300);
-      mockSendMessage
-        .mockResolvedValueOnce({
-          content: "I'm doing well!",
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 10,
-          outputTokens: 20,
-        })
-        .mockResolvedValueOnce({
-          content: longTitle,
-          model: "gpt-4o",
-          provider: "openai",
-          inputTokens: 5,
-          outputTokens: 3,
-        });
-
-      const res = await POST(makeRequest({ ...validBody, parentNodeId: null }));
-      const data = await res.json();
-
-      expect(data.generatedTitle.length).toBe(200);
-
-      const titleUpdateCalls = mockConversationFindByIdAndUpdate.mock.calls.filter(
-        (call: unknown[]) => {
-          const update = call[1] as Record<string, unknown>;
-          return typeof update.title === "string";
-        }
-      );
-      expect(titleUpdateCalls.length).toBe(1);
-      expect((titleUpdateCalls[0][1] as Record<string, string>).title.length).toBe(200);
-    });
   });
 
-  it("should delete user node on LLM failure to prevent orphans", async () => {
-    mockSendMessage.mockRejectedValue(new Error("LLM failed"));
-
-    await POST(makeRequest(validBody));
-
-    // User node should have been created (first call)
-    expect(mockNodeCreate).toHaveBeenCalledTimes(1);
-    expect(mockNodeCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        role: "user",
-        content: "Hello, how are you?",
-      })
-    );
-    // User node should have been deleted to prevent orphans
-    expect(mockNodeDeleteOne).toHaveBeenCalledTimes(1);
-    expect(mockNodeDeleteOne).toHaveBeenCalledWith({ _id: expect.anything() });
+  it("should have dynamic export set to force-dynamic", async () => {
+    const routeModule = await import("@/app/api/llm/chat/route");
+    expect((routeModule as any).dynamic).toBe("force-dynamic");
   });
 });

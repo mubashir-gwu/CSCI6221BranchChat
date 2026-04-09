@@ -1,6 +1,32 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
 
+type AnthropicMessage = Anthropic.MessageCreateParams['messages'][number];
+
+function buildAnthropicMessages(nonSystemMessages: LLMMessage[]): AnthropicMessage[] {
+  const formatted: AnthropicMessage[] = nonSystemMessages.map((m) => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }));
+
+  // Add cache_control to last message content block
+  if (formatted.length > 0) {
+    const lastMsg = formatted[formatted.length - 1];
+    const text = typeof lastMsg.content === 'string' ? lastMsg.content : '';
+    formatted[formatted.length - 1] = {
+      ...lastMsg,
+      content: [{ type: 'text' as const, text, cache_control: { type: 'ephemeral' as const } }],
+    };
+  }
+
+  return formatted;
+}
+
+function buildSystemParam(systemText: string) {
+  if (!systemText) return {};
+  return { system: [{ type: 'text' as const, text: systemText, cache_control: { type: 'ephemeral' as const } }] };
+}
+
 export const anthropicProvider: LLMProvider = {
   name: 'anthropic',
 
@@ -18,11 +44,8 @@ export const anthropicProvider: LLMProvider = {
     const response = await client.messages.create({
       model,
       max_tokens: 4096,
-      ...(systemText ? { system: systemText } : {}),
-      messages: nonSystemMessages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
+      ...buildSystemParam(systemText),
+      messages: buildAnthropicMessages(nonSystemMessages),
     });
 
     const firstBlock = response.content[0];
@@ -51,11 +74,8 @@ export const anthropicProvider: LLMProvider = {
       const stream = client.messages.stream({
         model,
         max_tokens: 4096,
-        ...(systemText ? { system: systemText } : {}),
-        messages: nonSystemMessages.map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
+        ...buildSystemParam(systemText),
+        messages: buildAnthropicMessages(nonSystemMessages),
       });
 
       for await (const event of stream) {

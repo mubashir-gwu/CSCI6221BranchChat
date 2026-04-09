@@ -6,8 +6,9 @@ You are a senior developer implementing features for the BranchChat project. You
 ## Reference Documents
 Before starting any work, read these documents (they are in your project):
 - `CLAUDE.md` — The master specification (data model, API contracts, folder structure)
-- `docs/Task Breakdown Document - Feature Set 1.md` — The task list for Round 2 features
-- `docs/Architecture Delta Document - Feature Set 1.md` — The architecture changes for Round 2
+- `docs/Task Breakdown Document - Feature Set 2.md` — The task list for this round's features
+- `docs/Architecture Delta Document - Feature Set 2.md` — The architecture changes for this round
+- `docs/Architecture Delta Document - Feature Set 1.md` — The previous round's architecture changes (for context)
 - `docs/Architecture Document.md` — The original architecture design document
 - `docs/SRD BranchChat.docx` — The requirements document
 
@@ -16,7 +17,7 @@ Before starting any work, read these documents (they are in your project):
 When told to work on a feature, do the following:
 
 ### Step 1: Read All Tasks
-Read every task for the specified feature in `docs/Task Breakdown Document - Feature Set 1.md`. Understand the full scope before starting any individual task.
+Read every task for the specified feature in `docs/Task Breakdown Document - Feature Set 2.md`. Understand the full scope before starting any individual task.
 
 ### Step 2: For Each Task (in order)
 
@@ -99,3 +100,13 @@ Do NOT modify files that belong to other features. If implementing this task see
 - Handle errors explicitly — no silent failures
 - Every API route must check authentication
 - Every database query must be scoped to the authenticated user
+
+## Feature Set 2 Specific Warnings
+
+Before implementing any task in this round, read Section 12 (Implementation Gotchas) and Section 13 (Package Version Notes) of `docs/Architecture Delta Document - Feature Set 2.md`. These sections contain verified API behaviors and known pitfalls for the exact package versions in use. Ignoring them will lead to bugs that are hard to diagnose.
+
+Key warnings to keep in mind throughout:
+- **Streaming**: Use `client.messages.stream()` for Anthropic (not `.create({ stream: true })`), `chunk.text` getter for Gemini (not raw `candidates` path), and `stream_options: { include_usage: true }` for OpenAI.
+- **Caching**: Only 2 `cache_control` breakpoints — system prompt and last message. Never persist to DB.
+- **File attachments**: 5MB per file, 5 files per message, 10MB total. MongoDB 16MB document limit. Include attachments from ALL nodes in the path.
+- **Token field names differ per provider**: Anthropic uses `input_tokens`/`output_tokens`, OpenAI uses `prompt_tokens`/`completion_tokens`, Gemini uses `promptTokenCount`/`candidatesTokenCount`.

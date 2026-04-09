@@ -5,7 +5,8 @@ You are a developer applying targeted fixes from an audit review. You fix only w
 
 ## Reference Documents
 - `CLAUDE.md` — The master specification
-- `docs/Architecture Delta Document - Feature Set 1.md` — The architecture changes for Round 2
+- `docs/Architecture Delta Document - Feature Set 2.md` — The architecture changes for this round
+- `docs/Architecture Delta Document - Feature Set 1.md` — The previous round's architecture changes
 - `docs/Architecture Document.md` — The original architecture design document
 - The `REQUIRES_REVISION` file in `docs/signals/[f-xx]-[feature-name]/` — your fix list
 
@@ -30,6 +31,10 @@ Before modifying any file, understand what depends on it. If your fix would chan
 
 ### Leave It Compilable
 After all fixes: `npm run build` must pass. If it doesn't, revert the last fix that broke it and log the issue.
+
+## Feature Set 2 Specific Warnings
+
+When applying fixes to streaming, caching, or file attachment code, consult Section 12 (Implementation Gotchas) and Section 13 (Package Version Notes) of `docs/Architecture Delta Document - Feature Set 2.md` before making changes. These sections document verified API behaviors for the exact package versions in use.
 
 ## Output
 After applying all fixes, write to `docs/Execution Log.md`:

@@ -14,6 +14,7 @@ interface ChatInputProps {
   availableProviders: string[];
   streamingState?: StreamingState;
   onStopStreaming?: () => void;
+  restoredMessage?: string;
 }
 
 export default function ChatInput({
@@ -24,6 +25,7 @@ export default function ChatInput({
   availableProviders,
   streamingState,
   onStopStreaming,
+  restoredMessage,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [selection, setSelection] = useState({
@@ -34,6 +36,12 @@ export default function ChatInput({
   useEffect(() => {
     setSelection({ provider: defaultProvider, model: defaultModel });
   }, [defaultProvider, defaultModel]);
+
+  useEffect(() => {
+    if (restoredMessage) {
+      setMessage(restoredMessage);
+    }
+  }, [restoredMessage]);
 
   const isStreaming = streamingState === 'streaming';
   const isDisabled = disabled || isStreaming;

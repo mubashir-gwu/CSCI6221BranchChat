@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
@@ -39,6 +39,7 @@ export default function ChatPage() {
     streamingState,
     abortStream,
   } = useStreamingChat();
+  const [restoredMessage, setRestoredMessage] = useState('');
 
   // Load nodes on mount
   useEffect(() => {
@@ -123,6 +124,7 @@ export default function ChatPage() {
 
   const handleSend = useCallback(
     async (content: string, provider: string, model: string) => {
+      setRestoredMessage('');
       const tempId = `temp-${Date.now()}`;
       const optimisticNode: TreeNode = {
         id: tempId,
@@ -152,8 +154,9 @@ export default function ChatPage() {
       dispatch({ type: "REMOVE_NODES", payload: [tempId] });
 
       if (result.type !== 'done') {
-        // Error or abort
+        // Error or abort — restore the prompt so user can edit and resend
         dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
+        setRestoredMessage(content);
 
         if (result.type === 'error') {
           const errorMsg = result.message;
@@ -325,6 +328,7 @@ export default function ChatPage() {
           availableProviders={availableProviders}
           streamingState={streamingState}
           onStopStreaming={abortStream}
+          restoredMessage={restoredMessage}
         />
       </div>
       <TreeSidebar

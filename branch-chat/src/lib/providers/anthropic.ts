@@ -38,9 +38,44 @@ export const anthropicProvider: LLMProvider = {
   },
 
   async *streamMessage(
-    _messages: LLMMessage[],
-    _model: string,
+    messages: LLMMessage[],
+    model: string,
   ): AsyncGenerator<StreamChunk> {
-    throw new Error('Not implemented');
+    try {
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+      const systemMessages = messages.filter((m) => m.role === 'system');
+      const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+      const systemText = systemMessages.map((m) => m.content).join('\n');
+
+      const stream = client.messages.stream({
+        model,
+        max_tokens: 4096,
+        ...(systemText ? { system: systemText } : {}),
+        messages: nonSystemMessages.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+      });
+
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          yield { type: 'token', content: event.delta.text };
+        }
+      }
+
+      const finalMessage = await stream.finalMessage();
+      yield {
+        type: 'done',
+        content: finalMessage.content[0].type === 'text' ? finalMessage.content[0].text : '',
+        inputTokens: finalMessage.usage.input_tokens,
+        outputTokens: finalMessage.usage.output_tokens,
+      };
+    } catch (error: any) {
+      yield { type: 'error', message: error?.message ?? 'Anthropic streaming error' };
+    }
   },
 };

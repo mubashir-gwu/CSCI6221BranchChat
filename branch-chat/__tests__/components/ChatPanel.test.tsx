@@ -207,4 +207,57 @@ describe("ChatPanel", () => {
     // Should NOT show the empty state text
     expect(screen.queryByText("Send a message to start the conversation.")).toBeNull();
   });
+
+  // Streaming tests
+  it("renders streaming content when streamingState is 'streaming' with content", () => {
+    render(
+      <ChatPanel
+        activePath={[]}
+        childrenMap={new Map()}
+        nodesMap={new Map()}
+        onBranchNavigate={vi.fn()}
+        isLoading={false}
+        streamingContent="Hello, I am streaming..."
+        streamingState="streaming"
+      />
+    );
+
+    expect(screen.getByText(/Hello, I am streaming\.\.\./)).toBeDefined();
+    expect(screen.getByTestId("scroll-area")).toBeDefined();
+  });
+
+  it("renders loading indicator when streaming but no content yet", () => {
+    render(
+      <ChatPanel
+        activePath={[]}
+        childrenMap={new Map()}
+        nodesMap={new Map()}
+        onBranchNavigate={vi.fn()}
+        isLoading={false}
+        streamingContent=""
+        streamingState="streaming"
+      />
+    );
+
+    // Should show the scroll area (not empty state)
+    expect(screen.getByTestId("scroll-area")).toBeDefined();
+    expect(screen.queryByText("Send a message to start the conversation.")).toBeNull();
+  });
+
+  it("does not show streaming message when state is idle", () => {
+    render(
+      <ChatPanel
+        activePath={[]}
+        childrenMap={new Map()}
+        nodesMap={new Map()}
+        onBranchNavigate={vi.fn()}
+        isLoading={false}
+        streamingContent=""
+        streamingState="idle"
+      />
+    );
+
+    // Should show empty state since no path and not streaming
+    expect(screen.getByText("Send a message to start the conversation.")).toBeDefined();
+  });
 });

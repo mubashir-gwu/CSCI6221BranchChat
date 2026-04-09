@@ -166,32 +166,16 @@ export async function POST(request: Request) {
 
     const messages = buildContext(parentNodeId, content.trim(), nodesMap, modelDef.contextWindow);
 
-    // Insert user node before streaming starts
-    const userNode = await Node.create({
-      conversationId,
-      parentId: parentNodeId,
-      role: "user",
-      content: content.trim(),
-      provider: null,
-      model: null,
-    });
-
-    // If first message, set rootNodeId
-    if (parentNodeId === null) {
-      await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: userNode._id });
-    }
-
     // Capture userId before stream (session already validated above)
     const userId = session!.user!.id;
 
-    // Start streaming
+    // Start streaming — nodes are saved to DB only on successful completion
     const llmProvider = getProvider(provider);
-    logger.info("LLM stream started", { context: { requestId, conversationId, userId: userId }, provider, model, messageCount: messages.length });
+    logger.info("LLM stream started", { context: { requestId, conversationId, userId }, provider, model, messageCount: messages.length });
     logger.debug("LLM messages", { context: { requestId, conversationId }, messages });
 
     const encoder = new TextEncoder();
     let accumulated = '';
-    let hasReceivedContent = false;
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -203,17 +187,26 @@ export async function POST(request: Request) {
 
           for await (const chunk of generator) {
             if (request.signal?.aborted) {
+              logger.info("Stream aborted by client", { context: { requestId, conversationId } });
               break;
             }
 
             if (chunk.type === 'token') {
-              hasReceivedContent = true;
               accumulated += chunk.content;
               controller.enqueue(
                 encoder.encode(encodeSSEEvent('token', { content: chunk.content }))
               );
             } else if (chunk.type === 'done') {
-              // Save assistant node
+              // Save both nodes to DB only on successful completion
+              const userNode = await Node.create({
+                conversationId,
+                parentId: parentNodeId,
+                role: "user",
+                content: content.trim(),
+                provider: null,
+                model: null,
+              });
+
               const assistantNode = await Node.create({
                 conversationId,
                 parentId: userNode._id,
@@ -223,10 +216,15 @@ export async function POST(request: Request) {
                 model,
               });
 
+              // Set rootNodeId if first message
+              if (parentNodeId === null) {
+                await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: userNode._id });
+              }
+
               // Track token usage
               try {
                 await TokenUsage.findOneAndUpdate(
-                  { userId: userId, provider },
+                  { userId, provider },
                   {
                     $inc: {
                       inputTokens: chunk.inputTokens ?? 0,
@@ -240,7 +238,7 @@ export async function POST(request: Request) {
                 // Token tracking failure should not break the stream
               }
 
-              logger.info("LLM stream completed", { context: { requestId, conversationId, userId: userId }, provider, model, inputTokens: chunk.inputTokens, outputTokens: chunk.outputTokens, durationMs: Date.now() - start });
+              logger.info("LLM stream completed", { context: { requestId, conversationId, userId }, provider, model, inputTokens: chunk.inputTokens, outputTokens: chunk.outputTokens, durationMs: Date.now() - start });
 
               // Send done event with node data
               controller.enqueue(
@@ -267,74 +265,25 @@ export async function POST(request: Request) {
                 });
               }
             } else if (chunk.type === 'error') {
-              // Handle error chunk from provider
-              if (hasReceivedContent) {
-                // Partial content received — save partial assistant node
-                const partialNode = await Node.create({
-                  conversationId,
-                  parentId: userNode._id,
-                  role: "assistant",
-                  content: accumulated,
-                  provider,
-                  model,
-                });
-                controller.enqueue(
-                  encoder.encode(encodeSSEEvent('error', {
-                    message: chunk.message,
-                    partial: true,
-                    userNode: serializeNode(userNode),
-                    assistantNode: serializeNode(partialNode),
-                  }))
-                );
-              } else {
-                // No content received — clean up orphaned user node
-                await Node.deleteOne({ _id: userNode._id });
-                if (parentNodeId === null) {
-                  await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
-                }
-                controller.enqueue(
-                  encoder.encode(encodeSSEEvent('error', {
-                    message: chunk.message,
-                    partial: false,
-                  }))
-                );
-              }
+              // Provider error — nothing saved to DB, just report
+              controller.enqueue(
+                encoder.encode(encodeSSEEvent('error', {
+                  message: chunk.message,
+                  partial: accumulated.length > 0,
+                }))
+              );
             }
           }
         } catch (err: any) {
-          logger.error("LLM stream error", { context: { route, method: "POST", userId: userId, requestId, conversationId }, provider, model, error: err?.message, stack: err?.stack });
+          logger.error("LLM stream error", { context: { route, method: "POST", userId, requestId, conversationId }, provider, model, error: err?.message, stack: err?.stack });
 
-          if (hasReceivedContent) {
-            // Save partial content
-            const partialNode = await Node.create({
-              conversationId,
-              parentId: userNode._id,
-              role: "assistant",
-              content: accumulated,
-              provider,
-              model,
-            });
-            controller.enqueue(
-              encoder.encode(encodeSSEEvent('error', {
-                message: err?.message ?? 'Stream error',
-                partial: true,
-                userNode: serializeNode(userNode),
-                assistantNode: serializeNode(partialNode),
-              }))
-            );
-          } else {
-            // Clean up orphaned user node
-            await Node.deleteOne({ _id: userNode._id });
-            if (parentNodeId === null) {
-              await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
-            }
-            controller.enqueue(
-              encoder.encode(encodeSSEEvent('error', {
-                message: err?.message ?? 'Stream error',
-                partial: false,
-              }))
-            );
-          }
+          // Nothing saved to DB, just report the error
+          controller.enqueue(
+            encoder.encode(encodeSSEEvent('error', {
+              message: err?.message ?? 'Stream error',
+              partial: accumulated.length > 0,
+            }))
+          );
         } finally {
           controller.close();
         }

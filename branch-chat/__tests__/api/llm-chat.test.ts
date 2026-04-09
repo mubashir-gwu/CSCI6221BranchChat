@@ -349,14 +349,14 @@ describe("POST /api/llm/chat", () => {
     expect(errorEvents[0].data.message).toBe("Provider error");
   });
 
-  it("should delete user node on pre-content error (orphan cleanup)", async () => {
+  it("should not save any nodes on pre-content error", async () => {
     mockStreamMessage.mockImplementation(() => errorBeforeContentGenerator());
 
     const res = await POST(makeRequest(validBody));
     await collectSSEEvents(res);
 
-    expect(mockNodeCreate).toHaveBeenCalledTimes(1); // user node only
-    expect(mockNodeDeleteOne).toHaveBeenCalledTimes(1);
+    expect(mockNodeCreate).not.toHaveBeenCalled();
+    expect(mockNodeDeleteOne).not.toHaveBeenCalled();
   });
 
   it("should send error event with partial:true when error after content", async () => {
@@ -371,14 +371,14 @@ describe("POST /api/llm/chat", () => {
     expect(errorEvents[0].data.message).toBe("Mid-stream error");
   });
 
-  it("should save partial content and keep user node on post-content error", async () => {
+  it("should not save any nodes on post-content error", async () => {
     mockStreamMessage.mockImplementation(() => errorAfterContentGenerator());
 
     const res = await POST(makeRequest(validBody));
     await collectSSEEvents(res);
 
-    // User node + partial assistant node
-    expect(mockNodeCreate).toHaveBeenCalledTimes(2);
+    // No nodes saved — DB writes only happen on successful completion
+    expect(mockNodeCreate).not.toHaveBeenCalled();
     expect(mockNodeDeleteOne).not.toHaveBeenCalled();
   });
 

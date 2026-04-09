@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Trash2Icon } from "lucide-react";
+import { Trash2Icon, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
 import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
@@ -123,6 +123,15 @@ export default function ChatMessage({
           </ReactMarkdown>
         </div>
 
+        {/* Attachment previews */}
+        {node.attachments && node.attachments.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {node.attachments.map((att, idx) => (
+              <AttachmentPreview key={`${att.filename}-${idx}`} attachment={att} isUser={isUser} />
+            ))}
+          </div>
+        )}
+
         {/* Branch indicator + menu when node has multiple children */}
         {childCount > 1 && (
           <div className="relative mt-2" ref={menuRef}>
@@ -174,6 +183,77 @@ export default function ChatMessage({
           destructive
           onConfirm={() => onDelete(node.id)}
         />
+      )}
+    </div>
+  );
+}
+
+function AttachmentPreview({
+  attachment,
+  isUser,
+}: {
+  attachment: { filename: string; mimeType: string; data: string; size: number };
+  isUser: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (attachment.mimeType.startsWith('image/')) {
+    const dataUrl = `data:${attachment.mimeType};base64,${attachment.data}`;
+    return (
+      <a href={dataUrl} target="_blank" rel="noopener noreferrer">
+        <img
+          src={dataUrl}
+          alt={attachment.filename}
+          className="max-h-48 rounded border cursor-pointer"
+        />
+      </a>
+    );
+  }
+
+  if (attachment.mimeType === 'application/pdf') {
+    const dataUrl = `data:application/pdf;base64,${attachment.data}`;
+    return (
+      <a
+        href={dataUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-muted/50 ${
+          isUser ? 'border-primary-foreground/30 text-primary-foreground' : 'border-border'
+        }`}
+      >
+        <FileText className="h-4 w-4 text-red-500" />
+        <span className="max-w-[150px] truncate">{attachment.filename}</span>
+      </a>
+    );
+  }
+
+  // Text files
+  const decodedText = (() => {
+    try {
+      return atob(attachment.data);
+    } catch {
+      return '[Unable to decode file content]';
+    }
+  })();
+
+  return (
+    <div className={`rounded-md border text-xs ${isUser ? 'border-primary-foreground/30' : 'border-border'}`}>
+      <button
+        onClick={() => setExpanded((prev) => !prev)}
+        className={`flex items-center gap-1.5 px-2 py-1 hover:bg-muted/50 w-full text-left ${
+          isUser ? 'text-primary-foreground' : ''
+        }`}
+      >
+        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <FileText className="h-4 w-4" />
+        <span className="max-w-[150px] truncate">{attachment.filename}</span>
+      </button>
+      {expanded && (
+        <pre className={`px-2 py-1 border-t max-h-48 overflow-auto whitespace-pre-wrap text-xs ${
+          isUser ? 'border-primary-foreground/30 text-primary-foreground' : 'border-border'
+        }`}>
+          {decodedText}
+        </pre>
       )}
     </div>
   );

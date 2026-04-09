@@ -55,7 +55,7 @@ export async function GET(
       version: 1,
       exportedAt: new Date().toISOString(),
       title: conversation.title,
-      nodes: nodes.map((n) => ({
+      nodes: nodes.map((n: any) => ({
         id: n._id.toString(),
         parentId: n.parentId?.toString() || null,
         childrenIds: childrenMap.get(n._id.toString()) || [],
@@ -63,6 +63,7 @@ export async function GET(
         content: n.content,
         provider: n.provider ?? null,
         model: n.model ?? null,
+        ...(n.attachments?.length ? { attachments: n.attachments } : {}),
         createdAt: n.createdAt.toISOString(),
       })),
     };

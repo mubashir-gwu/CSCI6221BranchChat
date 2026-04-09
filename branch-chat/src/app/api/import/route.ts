@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       content: node.content,
       provider: node.provider,
       model: node.model,
+      ...(node.attachments?.length ? { attachments: node.attachments } : {}),
       createdAt: node.createdAt ? new Date(node.createdAt) : new Date(),
     }));
 

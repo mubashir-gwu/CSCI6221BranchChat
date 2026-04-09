@@ -41,6 +41,7 @@ export function buildContext(
         filename: att.filename,
         mimeType: att.mimeType,
         data: att.data,
+        size: att.size,
       }));
     }
     return msg;

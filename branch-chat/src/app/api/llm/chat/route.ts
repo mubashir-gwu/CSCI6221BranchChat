@@ -210,6 +210,7 @@ export async function POST(request: Request) {
           filename: a.filename,
           mimeType: a.mimeType,
           data: a.data,
+          size: a.size,
         }))
       : undefined;
 

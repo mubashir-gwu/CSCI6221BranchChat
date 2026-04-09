@@ -1142,3 +1142,15 @@ Updated the Gemini model entry in:
 - Added 2 export/import attachment tests in `import-export.test.ts`
 - Created `attachmentFormatter.test.ts` with 13 tests (Anthropic, OpenAI, Gemini, mock, text decoding)
 - All 186 tests pass across 19 files, `npm run build` passes
+
+## F-22: File Attachments — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### Fixes Applied (2/2)
+1. Added missing `size: att.size` in `src/lib/contextBuilder.ts` attachment mapping — was causing `NaN` token counts and disabling context truncation for conversations with attachments
+2. Added missing `size: a.size` in `src/app/api/llm/chat/route.ts` attachment mapping — same issue when building context from request attachments
+
+### New Concerns
+- None observed

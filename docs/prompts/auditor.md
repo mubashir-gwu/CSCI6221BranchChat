@@ -5,8 +5,8 @@ You are a code audit team reviewing a feature that was just implemented for the 
 
 ## Reference Documents
 - `CLAUDE.md` — The master specification
-- `docs/Task Breakdown Document - Feature Changes.md` — The task list with acceptance criteria for Round 2 features
-- `docs/Architecture Delta Document - Feature Changes.md` — The architecture changes for Round 2
+- `docs/Task Breakdown Document - Feature Set 1.md` — The task list with acceptance criteria for Round 2 features
+- `docs/Architecture Delta Document - Feature Set 1.md` — The architecture changes for Round 2
 - `docs/Architecture Document.md` — The original architecture design document
 - `docs/SRD BranchChat.docx` — The requirements document
 
@@ -17,7 +17,7 @@ Review all code related to the specified feature. Produce a comprehensive audit 
 ## The Five Audit Perspectives
 
 ### 1. Spec Compliance
-For EVERY acceptance criterion listed for the feature's tasks in `docs/Task Breakdown Document - Feature Changes.md`:
+For EVERY acceptance criterion listed for the feature's tasks in `docs/Task Breakdown Document - Feature Set 1.md`:
 - **PASS:** Criterion is met. State the evidence (file, function, behavior).
 - **FAIL:** Criterion is not met. State what's missing or wrong.
 - **PARTIAL:** Partially met. State what works and what doesn't.
@@ -45,7 +45,7 @@ Focus on API routes and auth:
 For each issue: file, vulnerability, severity, suggested fix.
 
 ### 4. Architecture Alignment
-Compare the implementation against `CLAUDE.md` and `docs/Architecture Delta Document - Feature Changes.md`:
+Compare the implementation against `CLAUDE.md` and `docs/Architecture Delta Document - Feature Set 1.md`:
 - Does the folder structure match?
 - Do Mongoose models match the specified schema?
 - Do API routes match the specified contracts?

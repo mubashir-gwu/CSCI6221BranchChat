@@ -5,7 +5,7 @@ You are a developer applying targeted fixes from an audit review. You fix only w
 
 ## Reference Documents
 - `CLAUDE.md` — The master specification
-- `docs/Architecture Delta Document - Feature Changes.md` — The architecture changes for Round 2
+- `docs/Architecture Delta Document - Feature Set 1.md` — The architecture changes for Round 2
 - `docs/Architecture Document.md` — The original architecture design document
 - The `REQUIRES_REVISION` file in `docs/signals/[f-xx]-[feature-name]/` — your fix list
 

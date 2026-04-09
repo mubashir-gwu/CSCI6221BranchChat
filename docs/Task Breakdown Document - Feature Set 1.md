@@ -1,6 +1,6 @@
-# Task Breakdown — BranchChat Feature Changes
+# Task Breakdown — BranchChat Feature Set 1
 
-> Derived from the Architecture Delta Document (Stage 2-A) and the existing Task Breakdown (T-001 through T-063, all complete).
+> Derived from the Architecture Delta Document - Feature Set 1 (Stage 2-A) and the existing Task Breakdown (T-001 through T-063, all complete).
 > All file paths are relative to `branch-chat/`. The existing codebase is fully built and passing audits.
 
 ---
@@ -18,7 +18,7 @@
 | F-19: File-Based Logging | 4 | 0 | Medium |
 | **TOTAL** | **30** | **0** | — |
 
-All design decisions were resolved in the Architecture Delta Document. No deliberations needed — tasks are execution-ready.
+All design decisions were resolved in the Architecture Delta Document - Feature Set 1. No deliberations needed — tasks are execution-ready.
 
 ---
 
@@ -46,7 +46,7 @@ F-14, F-15, and F-16 can run in parallel after F-13, but are ordered sequentiall
 
 ## F-13: CLAUDE.md Update
 
-**Description:** Update `CLAUDE.md` to reflect all changes from the Architecture Delta Document so the builder agent has an accurate spec before implementing anything.
+**Description:** Update `CLAUDE.md` to reflect all changes from the Architecture Delta Document - Feature Set 1 so the builder agent has an accurate spec before implementing anything.
 
 **Dependencies:** All original features (F-01 through F-12) complete.
 

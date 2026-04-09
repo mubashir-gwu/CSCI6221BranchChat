@@ -10,9 +10,9 @@ These are the authoritative source documents. If anything in this file seems amb
 
 - **Software Requirements Document:** `docs/SRD BranchChat.docx`
 - **Architecture Design Document:** `docs/Architecture Document.md`
-- **Architecture Delta Document:** `docs/Architecture Delta Document - Feature Changes.md`
+- **Architecture Delta Document:** `docs/Architecture Delta Document - Feature Set 1.md`
 - **Architecture Deliberation Transcript:** `docs/decisions/Architecture Debate.md`
-- **Task Breakdown Document:** `docs/Task Breakdown Document - Feature Changes.md`
+- **Task Breakdown Document:** `docs/Task Breakdown Document - Feature Set 1.md`
 - **Runtime log with workarounds and known issues from previous features:** `docs/Execution Log.md`
 
 ## Project Root

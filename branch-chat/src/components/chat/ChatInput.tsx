@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { SendIcon } from "lucide-react";
+import { SendIcon, SquareIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
+import type { StreamingState } from "@/hooks/useStreamingChat";
 
 interface ChatInputProps {
   onSend: (content: string, provider: string, model: string) => void;
@@ -11,6 +12,8 @@ interface ChatInputProps {
   defaultProvider: string;
   defaultModel: string;
   availableProviders: string[];
+  streamingState?: StreamingState;
+  onStopStreaming?: () => void;
 }
 
 export default function ChatInput({
@@ -19,6 +22,8 @@ export default function ChatInput({
   defaultProvider,
   defaultModel,
   availableProviders,
+  streamingState,
+  onStopStreaming,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [selection, setSelection] = useState({
@@ -30,15 +35,18 @@ export default function ChatInput({
     setSelection({ provider: defaultProvider, model: defaultModel });
   }, [defaultProvider, defaultModel]);
 
+  const isStreaming = streamingState === 'streaming';
+  const isDisabled = disabled || isStreaming;
+
   const isProviderUnavailable =
     !selection.provider || !availableProviders.includes(selection.provider);
 
   const handleSend = useCallback(() => {
     const trimmed = message.trim();
-    if (!trimmed || disabled || isProviderUnavailable) return;
+    if (!trimmed || isDisabled || isProviderUnavailable) return;
     onSend(trimmed, selection.provider, selection.model);
     setMessage("");
-  }, [message, disabled, isProviderUnavailable, onSend, selection]);
+  }, [message, isDisabled, isProviderUnavailable, onSend, selection]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -58,16 +66,27 @@ export default function ChatInput({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={disabled}
+          disabled={isDisabled}
         />
-        <Button
-          size="icon"
-          onClick={handleSend}
-          disabled={disabled || !message.trim() || isProviderUnavailable}
-          aria-label="Send message"
-        >
-          <SendIcon className="h-4 w-4" />
-        </Button>
+        {isStreaming && onStopStreaming ? (
+          <Button
+            size="icon"
+            variant="destructive"
+            onClick={onStopStreaming}
+            aria-label="Stop streaming"
+          >
+            <SquareIcon className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            onClick={handleSend}
+            disabled={isDisabled || !message.trim() || isProviderUnavailable}
+            aria-label="Send message"
+          >
+            <SendIcon className="h-4 w-4" />
+          </Button>
+        )}
       </div>
       <div className="mt-2">
         <ModelSelector

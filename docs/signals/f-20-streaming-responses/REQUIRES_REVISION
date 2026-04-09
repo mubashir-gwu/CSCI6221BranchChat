@@ -1,0 +1,11 @@
+Two issues found during audit cycle 1. Both are isolated fixes — no architectural changes needed.
+
+1. **Stale closure for `streamingError` in handleSend** (Medium)
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`
+   - Issue: In `handleSend` (line ~125), after `sendStreamingMessage` returns `null`, the code reads `streamingError` from the outer closure (line ~159). But `streamingError` was captured when the callback was created, not when the error actually occurred inside `sendStreamingMessage`. The `setState` call inside the hook updates the hook's state, but the `handleSend` closure still holds the stale value from before the call.
+   - Fix: `sendStreamingMessage` should return error information directly (e.g., return `{ error: string }` on failure instead of `null`), OR the hook should expose `streamingError` via a ref that `handleSend` reads after the await. The simplest approach: change `sendStreamingMessage` to return `{ type: 'error', message: string }` on failure and `{ type: 'done', ...DoneEventData }` on success. Then `handleSend` reads the error from the return value, not from the hook's reactive state.
+
+2. **Unused `createSSEStream` helper** (Low)
+   - File: `src/lib/providers/streamHelpers.ts`
+   - Issue: `createSSEStream` (lines 7-63) was created per T-094 spec but is never called. The route in `route.ts` builds its own `ReadableStream` inline because it needs to write DB-saved node data into the `done` event (which `createSSEStream`'s callback model doesn't support cleanly). This is dead code.
+   - Fix: Remove the `createSSEStream` function from `streamHelpers.ts`. Keep only `encodeSSEEvent` which is actively used. This keeps the codebase clean and avoids confusion about which streaming pattern to use.

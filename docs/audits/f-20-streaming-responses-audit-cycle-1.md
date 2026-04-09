@@ -201,4 +201,4 @@ Note: CLAUDE.md's API Contracts section still shows the non-streaming response f
 - Medium issues: 1 (stale closure for streamingError in handleSend)
 - Low issues: 1 (unused createSSEStream helper — dead code)
 - CLAUDE.md updates: 0
-- Recommendation: **PROCEED** — The medium issue (stale closure) may cause error toasts to not display correctly on the first error occurrence, but the streaming functionality itself works correctly. The error is still set in the hook state and would display on a subsequent render cycle. This is a UX polish issue, not a correctness or data integrity issue.
+- Recommendation: **FIX FIRST** — Two isolated fixes needed before proceeding: (1) fix the stale closure so error toasts display reliably, (2) remove dead `createSSEStream` code to keep the codebase clean. Neither requires architectural changes.

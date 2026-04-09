@@ -8,12 +8,26 @@ const NodeSchema = new Schema(
     content: { type: String, required: true },
     provider: { type: String, enum: ['openai', 'anthropic', 'gemini', 'mock', null], default: null },
     model: { type: String, default: null },
+    attachments: [{
+      filename: { type: String, required: true },
+      mimeType: { type: String, required: true },
+      data: { type: String, required: true },
+      size: { type: Number, required: true },
+      _id: false
+    }],
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 NodeSchema.index({ conversationId: 1 });
 NodeSchema.index({ conversationId: 1, parentId: 1 });
+
+export interface Attachment {
+  filename: string;
+  mimeType: string;
+  data: string;
+  size: number;
+}
 
 export interface INode {
   _id: Types.ObjectId;
@@ -23,6 +37,7 @@ export interface INode {
   content: string;
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock' | null;
   model: string | null;
+  attachments?: Attachment[];
   createdAt: Date;
 }
 

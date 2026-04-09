@@ -52,6 +52,7 @@ export interface NodeResponse {
   content: string;
   provider: string | null;
   model: string | null;
+  attachments?: { filename: string; mimeType: string; data: string; size: number }[];
   createdAt: string;
 }
 
@@ -71,6 +72,7 @@ export interface LLMChatRequest {
   content: string;
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock';
   model: string;
+  attachments?: { filename: string; mimeType: string; data: string; size: number }[];
 }
 
 export interface LLMChatResponse {

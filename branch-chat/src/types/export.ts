@@ -10,6 +10,7 @@ export interface ExportedTree {
     content: string;
     provider: string | null;
     model: string | null;
+    attachments?: { filename: string; mimeType: string; data: string; size: number }[];
     createdAt: string;
   }[];
 }

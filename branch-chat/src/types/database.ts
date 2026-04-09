@@ -17,6 +17,13 @@ export interface DBConversation {
   updatedAt: string;
 }
 
+export interface DBAttachment {
+  filename: string;
+  mimeType: string;
+  data: string;
+  size: number;
+}
+
 export interface DBNode {
   _id: string;
   conversationId: string;
@@ -25,5 +32,6 @@ export interface DBNode {
   content: string;
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock' | null;
   model: string | null;
+  attachments?: DBAttachment[];
   createdAt: string;
 }

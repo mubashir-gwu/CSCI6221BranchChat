@@ -11,6 +11,15 @@ This is a **mock response** for development.
 console.log("Hello from mock!");
 \`\`\``;
 
+function getAttachmentPrefix(messages: LLMMessage[]): string {
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+  if (lastUserMsg?.attachments && lastUserMsg.attachments.length > 0) {
+    const filenames = lastUserMsg.attachments.map((a) => a.filename).join(', ');
+    return `I see you've attached: ${filenames}. `;
+  }
+  return '';
+}
+
 export const mockProvider: LLMProvider = {
   name: 'mock',
 
@@ -20,13 +29,16 @@ export const mockProvider: LLMProvider = {
   ): Promise<LLMResponse> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    const prefix = getAttachmentPrefix(_messages);
+    const responseContent = prefix + MOCK_RESPONSE;
+
     const inputTokens = Math.ceil(
       _messages.reduce((sum, m) => sum + m.content.length, 0) / 4
     );
-    const outputTokens = Math.ceil(MOCK_RESPONSE.length / 4);
+    const outputTokens = Math.ceil(responseContent.length / 4);
 
     return {
-      content: MOCK_RESPONSE,
+      content: responseContent,
       provider: 'mock',
       model,
       inputTokens,
@@ -40,16 +52,19 @@ export const mockProvider: LLMProvider = {
   ): AsyncGenerator<StreamChunk> {
     const inputLength = _messages.reduce((sum, m) => sum + m.content.length, 0);
 
-    for (const char of MOCK_RESPONSE) {
+    const prefix = getAttachmentPrefix(_messages);
+    const responseContent = prefix + MOCK_RESPONSE;
+
+    for (const char of responseContent) {
       await new Promise((r) => setTimeout(r, 10));
       yield { type: 'token', content: char };
     }
 
     yield {
       type: 'done',
-      content: MOCK_RESPONSE,
+      content: responseContent,
       inputTokens: Math.ceil(inputLength / 4),
-      outputTokens: Math.ceil(MOCK_RESPONSE.length / 4),
+      outputTokens: Math.ceil(responseContent.length / 4),
     };
   },
 };

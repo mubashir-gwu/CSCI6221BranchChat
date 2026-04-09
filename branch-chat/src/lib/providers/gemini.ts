@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { LLMProvider, LLMResponse, LLMMessage } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
 
 export const geminiProvider: LLMProvider = {
   name: 'gemini',
@@ -38,5 +38,12 @@ export const geminiProvider: LLMProvider = {
       inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
     };
+  },
+
+  async *streamMessage(
+    _messages: LLMMessage[],
+    _model: string,
+  ): AsyncGenerator<StreamChunk> {
+    throw new Error('Not implemented');
   },
 };

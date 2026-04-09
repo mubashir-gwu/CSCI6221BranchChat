@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { LLMProvider, LLMResponse, LLMMessage } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
 
 export const openaiProvider: LLMProvider = {
   name: 'openai',
@@ -25,5 +25,12 @@ export const openaiProvider: LLMProvider = {
       inputTokens: response.usage?.prompt_tokens ?? 0,
       outputTokens: response.usage?.completion_tokens ?? 0,
     };
+  },
+
+  async *streamMessage(
+    _messages: LLMMessage[],
+    _model: string,
+  ): AsyncGenerator<StreamChunk> {
+    throw new Error('Not implemented');
   },
 };

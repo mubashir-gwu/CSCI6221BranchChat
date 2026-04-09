@@ -1,4 +1,4 @@
-import type { LLMProvider, LLMResponse, LLMMessage } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
 
 const MOCK_RESPONSE = `## Mock Response
 
@@ -32,5 +32,12 @@ export const mockProvider: LLMProvider = {
       inputTokens,
       outputTokens,
     };
+  },
+
+  async *streamMessage(
+    _messages: LLMMessage[],
+    _model: string,
+  ): AsyncGenerator<StreamChunk> {
+    throw new Error('Not implemented');
   },
 };

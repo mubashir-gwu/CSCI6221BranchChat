@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMProvider, LLMResponse, LLMMessage } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
 
 export const anthropicProvider: LLMProvider = {
   name: 'anthropic',
@@ -35,5 +35,12 @@ export const anthropicProvider: LLMProvider = {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
     };
+  },
+
+  async *streamMessage(
+    _messages: LLMMessage[],
+    _model: string,
+  ): AsyncGenerator<StreamChunk> {
+    throw new Error('Not implemented');
   },
 };

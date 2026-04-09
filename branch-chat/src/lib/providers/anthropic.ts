@@ -1,22 +1,42 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 type AnthropicMessage = Anthropic.MessageCreateParams['messages'][number];
 
 function buildAnthropicMessages(nonSystemMessages: LLMMessage[]): AnthropicMessage[] {
-  const formatted: AnthropicMessage[] = nonSystemMessages.map((m) => ({
-    role: m.role as 'user' | 'assistant',
-    content: m.content,
-  }));
+  const formatted: AnthropicMessage[] = nonSystemMessages.map((m) => {
+    const contentBlocks: any[] = [];
 
-  // Add cache_control to last message content block
+    // Add attachment content blocks first
+    if (m.attachments && m.attachments.length > 0) {
+      const attachmentBlocks = formatAttachmentsForProvider(m.attachments, 'anthropic');
+      contentBlocks.push(...attachmentBlocks);
+    }
+
+    // Add text content block
+    contentBlocks.push({ type: 'text' as const, text: m.content });
+
+    return {
+      role: m.role as 'user' | 'assistant',
+      content: contentBlocks.length === 1 && !m.attachments?.length ? m.content : contentBlocks,
+    };
+  });
+
+  // Add cache_control to last message's last content block (AFTER attachments)
   if (formatted.length > 0) {
     const lastMsg = formatted[formatted.length - 1];
-    const text = typeof lastMsg.content === 'string' ? lastMsg.content : '';
-    formatted[formatted.length - 1] = {
-      ...lastMsg,
-      content: [{ type: 'text' as const, text, cache_control: { type: 'ephemeral' as const } }],
-    };
+    if (typeof lastMsg.content === 'string') {
+      formatted[formatted.length - 1] = {
+        ...lastMsg,
+        content: [{ type: 'text' as const, text: lastMsg.content, cache_control: { type: 'ephemeral' as const } }],
+      };
+    } else if (Array.isArray(lastMsg.content)) {
+      const blocks = [...lastMsg.content] as any[];
+      const lastBlock = blocks[blocks.length - 1];
+      blocks[blocks.length - 1] = { ...lastBlock, cache_control: { type: 'ephemeral' as const } };
+      formatted[formatted.length - 1] = { ...lastMsg, content: blocks };
+    }
   }
 
   return formatted;

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 export const geminiProvider: LLMProvider = {
   name: 'gemini',
@@ -13,12 +14,21 @@ export const geminiProvider: LLMProvider = {
     const systemMessages = messages.filter((m) => m.role === 'system');
     const nonSystemMessages = messages.filter((m) => m.role !== 'system');
 
-    const history = nonSystemMessages.slice(0, -1).map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
+    const history = nonSystemMessages.slice(0, -1).map((m) => {
+      const parts: any[] = [];
+      if (m.attachments && m.attachments.length > 0) {
+        parts.push(...formatAttachmentsForProvider(m.attachments, 'gemini'));
+      }
+      parts.push({ text: m.content });
+      return { role: m.role === 'assistant' ? 'model' : 'user', parts };
+    });
 
     const lastMessage = nonSystemMessages[nonSystemMessages.length - 1];
+    const lastParts: any[] = [];
+    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
+      lastParts.push(...formatAttachmentsForProvider(lastMessage.attachments, 'gemini'));
+    }
+    lastParts.push({ text: lastMessage.content });
 
     const systemInstruction = systemMessages.length > 0
       ? systemMessages.map((m) => m.content).join('\n')
@@ -29,7 +39,7 @@ export const geminiProvider: LLMProvider = {
       history,
       ...(systemInstruction ? { config: { systemInstruction } } : {}),
     });
-    const response = await chat.sendMessage({ message: lastMessage.content });
+    const response = await chat.sendMessage({ message: lastParts });
 
     return {
       content: response.text ?? '',
@@ -54,10 +64,14 @@ export const geminiProvider: LLMProvider = {
         ? systemMessages.map((m) => m.content).join('\n')
         : undefined;
 
-      const contents = nonSystemMessages.map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
+      const contents = nonSystemMessages.map((m) => {
+        const parts: any[] = [];
+        if (m.attachments && m.attachments.length > 0) {
+          parts.push(...formatAttachmentsForProvider(m.attachments, 'gemini'));
+        }
+        parts.push({ text: m.content });
+        return { role: m.role === 'assistant' ? 'model' : 'user', parts };
+      });
 
       const stream = await ai.models.generateContentStream({
         model,

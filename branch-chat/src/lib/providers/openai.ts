@@ -1,5 +1,19 @@
 import OpenAI from 'openai';
 import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import { formatAttachmentsForProvider } from './attachmentFormatter';
+
+function buildOpenAIMessages(messages: LLMMessage[]): any[] {
+  return messages.map((m) => {
+    if (m.attachments && m.attachments.length > 0) {
+      const contentParts: any[] = [];
+      const attachmentBlocks = formatAttachmentsForProvider(m.attachments, 'openai');
+      contentParts.push(...attachmentBlocks);
+      contentParts.push({ type: 'text', text: m.content });
+      return { role: m.role, content: contentParts };
+    }
+    return { role: m.role, content: m.content };
+  });
+}
 
 export const openaiProvider: LLMProvider = {
   name: 'openai',
@@ -12,10 +26,7 @@ export const openaiProvider: LLMProvider = {
 
     const response = await client.chat.completions.create({
       model,
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
+      messages: buildOpenAIMessages(messages),
     });
 
     return {
@@ -36,10 +47,7 @@ export const openaiProvider: LLMProvider = {
 
       const stream = await client.chat.completions.create({
         model,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        messages: buildOpenAIMessages(messages),
         stream: true,
         stream_options: { include_usage: true },
       });

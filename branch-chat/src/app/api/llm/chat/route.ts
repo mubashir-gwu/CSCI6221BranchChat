@@ -66,6 +66,7 @@ function serializeNode(doc: any): NodeResponse {
     content: doc.content,
     provider: doc.provider ?? null,
     model: doc.model ?? null,
+    ...(doc.attachments?.length ? { attachments: doc.attachments } : {}),
     createdAt: doc.createdAt.toISOString(),
   };
 }
@@ -78,6 +79,13 @@ export async function POST(request: Request) {
   logger.info("Route entered", { context: { route, method: "POST", requestId } });
 
   try {
+    // Body size check — reject >20MB payloads
+    const contentLength = parseInt(request.headers.get('content-length') || '0');
+    const MAX_BODY_SIZE = 20 * 1024 * 1024; // 20MB
+    if (contentLength > MAX_BODY_SIZE) {
+      return Response.json({ error: 'Request body too large' }, { status: 413 });
+    }
+
     let body: any;
     try {
       body = await request.json();
@@ -85,7 +93,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { conversationId, parentNodeId, content, provider, model } = body;
+    const { conversationId, parentNodeId, content, provider, model, attachments } = body;
 
     // Auth check
     const session = await auth();
@@ -128,6 +136,37 @@ export async function POST(request: Request) {
       return Response.json({ error: `Invalid model: ${model}` }, { status: 400 });
     }
 
+    // Validate attachments
+    const ALLOWED_MIME_TYPES = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'text/plain', 'text/markdown', 'text/csv',
+    ];
+
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+      if (attachments.length > 5) {
+        return Response.json({ error: "Maximum 5 files per message" }, { status: 400 });
+      }
+
+      let totalSize = 0;
+      for (const att of attachments) {
+        if (!att.filename || !att.mimeType || !att.data || typeof att.size !== 'number') {
+          return Response.json({ error: "Invalid attachment format" }, { status: 400 });
+        }
+        if (att.size > 5 * 1024 * 1024) {
+          return Response.json({ error: `File ${att.filename} exceeds 5MB limit` }, { status: 400 });
+        }
+        if (!ALLOWED_MIME_TYPES.includes(att.mimeType)) {
+          return Response.json({ error: `File type ${att.mimeType} is not allowed` }, { status: 400 });
+        }
+        totalSize += att.size;
+      }
+
+      if (totalSize > 10 * 1024 * 1024) {
+        return Response.json({ error: "Total attachment size exceeds 10MB limit" }, { status: 400 });
+      }
+    }
+
     await connectDB();
 
     // Verify conversation ownership
@@ -151,6 +190,7 @@ export async function POST(request: Request) {
           content: n.content as string,
           provider: n.provider ?? null,
           model: n.model ?? null,
+          attachments: n.attachments ?? [],
           createdAt: n.createdAt.toISOString(),
         },
       ])
@@ -164,7 +204,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const messages = buildContext(parentNodeId, content.trim(), nodesMap, modelDef.contextWindow);
+    // Map request attachments to LLMAttachment format for context builder
+    const llmAttachments = attachments?.length
+      ? attachments.map((a: { filename: string; mimeType: string; data: string; size: number }) => ({
+          filename: a.filename,
+          mimeType: a.mimeType,
+          data: a.data,
+        }))
+      : undefined;
+
+    const messages = buildContext(parentNodeId, content.trim(), nodesMap, modelDef.contextWindow, llmAttachments);
 
     // Capture userId before stream (session already validated above)
     const userId = session!.user!.id;
@@ -205,6 +254,7 @@ export async function POST(request: Request) {
                 content: content.trim(),
                 provider: null,
                 model: null,
+                ...(attachments?.length ? { attachments } : {}),
               });
 
               const assistantNode = await Node.create({

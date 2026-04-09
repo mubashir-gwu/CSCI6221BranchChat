@@ -1033,3 +1033,23 @@ Updated the Gemini model entry in:
 ### Verification
 - `npm run build` passes
 - 158 tests across 17 files, all passing
+
+## F-20: Streaming Responses — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### Fix 1: Stale closure for `streamingError` in handleSend
+- Changed `sendStreamingMessage` return type from `DoneEventData | null` to a discriminated union: `{ type: 'done', data } | { type: 'error', message } | { type: 'aborted' }`
+- `handleSend` now reads error message from the return value directly instead of the stale `streamingError` closure
+- Removed unused `streamingError` destructure from chat page
+
+### Fix 2: Unused `createSSEStream` helper
+- Removed dead `createSSEStream` function from `streamHelpers.ts`
+- Kept `encodeSSEEvent` which is actively used by the route handler
+- Confirmed no imports of `createSSEStream` existed elsewhere
+
+### Verification
+- `npm run build` passes
+- 2/2 fixes applied successfully
+- No new concerns

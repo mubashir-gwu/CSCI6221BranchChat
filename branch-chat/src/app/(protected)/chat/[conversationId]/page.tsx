@@ -37,7 +37,6 @@ export default function ChatPage() {
     sendStreamingMessage,
     streamingContent,
     streamingState,
-    streamingError,
     abortStream,
   } = useStreamingChat();
 
@@ -141,7 +140,7 @@ export default function ChatPage() {
 
       const retry = () => handleSend(content, provider, model);
 
-      const doneData = await sendStreamingMessage({
+      const result = await sendStreamingMessage({
         conversationId,
         parentNodeId: state.activeNodeId,
         content,
@@ -152,12 +151,12 @@ export default function ChatPage() {
       // Remove optimistic node
       dispatch({ type: "REMOVE_NODES", payload: [tempId] });
 
-      if (!doneData) {
+      if (result.type !== 'done') {
         // Error or abort
         dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
 
-        if (streamingError) {
-          const errorMsg = streamingError;
+        if (result.type === 'error') {
+          const errorMsg = result.message;
           if (errorMsg.includes("not configured")) {
             toast.error(`Provider ${provider} is not available.`);
           } else if (errorMsg.includes("Rate limited")) {
@@ -175,8 +174,8 @@ export default function ChatPage() {
         return;
       }
 
-      const userNode = nodeResponseToTreeNode(doneData.userNode);
-      const assistantNode = nodeResponseToTreeNode(doneData.assistantNode);
+      const userNode = nodeResponseToTreeNode(result.data.userNode);
+      const assistantNode = nodeResponseToTreeNode(result.data.assistantNode);
 
       dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
       dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
@@ -211,7 +210,7 @@ export default function ChatPage() {
         // Non-critical — title refresh can fail silently
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, streamingError, conversation?.title]
+    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, conversation?.title]
   );
 
   const handleBranchNavigate = useCallback(

@@ -1,19 +1,20 @@
-import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { buildContext } from "@/lib/contextBuilder";
 import { getProvider } from "@/lib/providers";
 import { isProviderAvailable } from "@/lib/providers/availability";
+import { encodeSSEEvent } from "@/lib/providers/streamHelpers";
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
 import { TokenUsage } from "@/models/TokenUsage";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
 import { logger } from "@/lib/logger";
-import type { LLMMessage } from "@/lib/providers/types";
+import type { LLMMessage, StreamChunk } from "@/lib/providers/types";
 import type { NodeResponse } from "@/types/api";
 
+export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 async function generateTitle(
@@ -81,50 +82,50 @@ export async function POST(request: Request) {
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
     const { conversationId, parentNodeId, content, provider, model } = body;
 
-    // Auth check — before any validation to prevent information leakage
+    // Auth check
     const session = await auth();
     if (!session?.user?.id) {
       logger.warn("Unauthorized request", { context: { route, method: "POST", requestId } });
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Validate required fields
     if (!conversationId || content === undefined || content === null || !provider || !model) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     if (typeof content !== "string" || !content.trim()) {
-      return NextResponse.json({ error: "Content must be a non-empty string" }, { status: 400 });
+      return Response.json({ error: "Content must be a non-empty string" }, { status: 400 });
     }
 
     // Validate provider
     if (!(provider in PROVIDERS)) {
-      return NextResponse.json({ error: `Invalid provider: ${provider}` }, { status: 400 });
+      return Response.json({ error: `Invalid provider: ${provider}` }, { status: 400 });
     }
 
     // Mock only in development
     if (provider === "mock" && process.env.NODE_ENV !== "development") {
-      return NextResponse.json({ error: "Mock provider is only available in development" }, { status: 400 });
+      return Response.json({ error: "Mock provider is only available in development" }, { status: 400 });
     }
 
-    // Check provider availability (env var key configured)
+    // Check provider availability
     if (!isProviderAvailable(provider)) {
-      return NextResponse.json(
+      return Response.json(
         { error: `Provider ${provider} is not configured.` },
         { status: 422 }
       );
     }
 
-    // Validate model against provider's model list
+    // Validate model
     const providerModels = MODELS[provider as keyof typeof MODELS];
     const modelDef = providerModels?.find((m) => m.id === model);
     if (!modelDef) {
-      return NextResponse.json({ error: `Invalid model: ${model}` }, { status: 400 });
+      return Response.json({ error: `Invalid model: ${model}` }, { status: 400 });
     }
 
     await connectDB();
@@ -132,10 +133,10 @@ export async function POST(request: Request) {
     // Verify conversation ownership
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+      return Response.json({ error: "Conversation not found" }, { status: 404 });
     }
-    if (conversation.userId.toString() !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (conversation.userId.toString() !== session!.user!.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Load all nodes and build context
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
 
     // Validate parentNodeId exists in this conversation
     if (parentNodeId !== null && !nodesMap.has(parentNodeId)) {
-      return NextResponse.json(
+      return Response.json(
         { error: "Parent node not found in this conversation" },
         { status: 400 }
       );
@@ -165,7 +166,7 @@ export async function POST(request: Request) {
 
     const messages = buildContext(parentNodeId, content.trim(), nodesMap, modelDef.contextWindow);
 
-    // Insert user node
+    // Insert user node before streaming starts
     const userNode = await Node.create({
       conversationId,
       parentId: parentNodeId,
@@ -180,98 +181,182 @@ export async function POST(request: Request) {
       await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: userNode._id });
     }
 
-    // Call LLM provider
-    try {
-      logger.info("LLM call started", { context: { requestId, conversationId, userId: session.user.id }, provider, model, messageCount: messages.length });
-      logger.debug("LLM messages", { context: { requestId, conversationId }, messages });
-      const llmStart = Date.now();
-      const llmResponse = await getProvider(provider).sendMessage(messages, model);
-      logger.info("LLM call completed", { context: { requestId, conversationId, userId: session.user.id }, provider, model, inputTokens: llmResponse.inputTokens, outputTokens: llmResponse.outputTokens, durationMs: Date.now() - llmStart });
-      logger.debug("LLM response content", { context: { requestId, conversationId }, content: llmResponse.content });
+    // Capture userId before stream (session already validated above)
+    const userId = session!.user!.id;
 
-      // Insert assistant node
-      const assistantNode = await Node.create({
-        conversationId,
-        parentId: userNode._id,
-        role: "assistant",
-        content: llmResponse.content,
-        provider,
-        model,
-      });
+    // Start streaming
+    const llmProvider = getProvider(provider);
+    logger.info("LLM stream started", { context: { requestId, conversationId, userId: userId }, provider, model, messageCount: messages.length });
+    logger.debug("LLM messages", { context: { requestId, conversationId }, messages });
 
-      // Track token usage (non-blocking)
-      try {
-        await TokenUsage.findOneAndUpdate(
-          { userId: session.user.id, provider },
-          {
-            $inc: {
-              inputTokens: llmResponse.inputTokens ?? 0,
-              outputTokens: llmResponse.outputTokens ?? 0,
-              callCount: 1,
-            },
-          },
-          { upsert: true }
-        );
-      } catch {
-        // Token tracking failure should not break the chat response
-      }
+    const encoder = new TextEncoder();
+    let accumulated = '';
+    let hasReceivedContent = false;
 
-      // Auto-generate title for first message
-      let generatedTitle: string | null = null;
-      if (conversation.title === "New Conversation") {
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Initial padding comment to flush browser buffers
+        controller.enqueue(encoder.encode(':\n\n'));
+
         try {
-          generatedTitle = await generateTitle(
-            conversationId,
-            content.trim(),
-            provider,
-            model,
-            session.user.id
-          );
-        } catch (titleErr: any) {
-          logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
+          const generator = llmProvider.streamMessage(messages, model);
+
+          for await (const chunk of generator) {
+            if (request.signal?.aborted) {
+              break;
+            }
+
+            if (chunk.type === 'token') {
+              hasReceivedContent = true;
+              accumulated += chunk.content;
+              controller.enqueue(
+                encoder.encode(encodeSSEEvent('token', { content: chunk.content }))
+              );
+            } else if (chunk.type === 'done') {
+              // Save assistant node
+              const assistantNode = await Node.create({
+                conversationId,
+                parentId: userNode._id,
+                role: "assistant",
+                content: chunk.content,
+                provider,
+                model,
+              });
+
+              // Track token usage
+              try {
+                await TokenUsage.findOneAndUpdate(
+                  { userId: userId, provider },
+                  {
+                    $inc: {
+                      inputTokens: chunk.inputTokens ?? 0,
+                      outputTokens: chunk.outputTokens ?? 0,
+                      callCount: 1,
+                    },
+                  },
+                  { upsert: true }
+                );
+              } catch {
+                // Token tracking failure should not break the stream
+              }
+
+              logger.info("LLM stream completed", { context: { requestId, conversationId, userId: userId }, provider, model, inputTokens: chunk.inputTokens, outputTokens: chunk.outputTokens, durationMs: Date.now() - start });
+
+              // Send done event with node data
+              controller.enqueue(
+                encoder.encode(encodeSSEEvent('done', {
+                  userNode: serializeNode(userNode),
+                  assistantNode: serializeNode(assistantNode),
+                  tokenUsage: {
+                    inputTokens: chunk.inputTokens,
+                    outputTokens: chunk.outputTokens,
+                  },
+                }))
+              );
+
+              // Auto-title (fire-and-forget, non-streaming)
+              if (conversation.title === "New Conversation") {
+                generateTitle(
+                  conversationId,
+                  content.trim(),
+                  provider,
+                  model,
+                  userId
+                ).catch((titleErr: any) => {
+                  logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
+                });
+              }
+            } else if (chunk.type === 'error') {
+              // Handle error chunk from provider
+              if (hasReceivedContent) {
+                // Partial content received — save partial assistant node
+                const partialNode = await Node.create({
+                  conversationId,
+                  parentId: userNode._id,
+                  role: "assistant",
+                  content: accumulated,
+                  provider,
+                  model,
+                });
+                controller.enqueue(
+                  encoder.encode(encodeSSEEvent('error', {
+                    message: chunk.message,
+                    partial: true,
+                    userNode: serializeNode(userNode),
+                    assistantNode: serializeNode(partialNode),
+                  }))
+                );
+              } else {
+                // No content received — clean up orphaned user node
+                await Node.deleteOne({ _id: userNode._id });
+                if (parentNodeId === null) {
+                  await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
+                }
+                controller.enqueue(
+                  encoder.encode(encodeSSEEvent('error', {
+                    message: chunk.message,
+                    partial: false,
+                  }))
+                );
+              }
+            }
+          }
+        } catch (err: any) {
+          logger.error("LLM stream error", { context: { route, method: "POST", userId: userId, requestId, conversationId }, provider, model, error: err?.message, stack: err?.stack });
+
+          if (hasReceivedContent) {
+            // Save partial content
+            const partialNode = await Node.create({
+              conversationId,
+              parentId: userNode._id,
+              role: "assistant",
+              content: accumulated,
+              provider,
+              model,
+            });
+            controller.enqueue(
+              encoder.encode(encodeSSEEvent('error', {
+                message: err?.message ?? 'Stream error',
+                partial: true,
+                userNode: serializeNode(userNode),
+                assistantNode: serializeNode(partialNode),
+              }))
+            );
+          } else {
+            // Clean up orphaned user node
+            await Node.deleteOne({ _id: userNode._id });
+            if (parentNodeId === null) {
+              await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
+            }
+            controller.enqueue(
+              encoder.encode(encodeSSEEvent('error', {
+                message: err?.message ?? 'Stream error',
+                partial: false,
+              }))
+            );
+          }
+        } finally {
+          controller.close();
         }
-      }
+      },
+      cancel() {
+        // Client disconnected — abort signal will be picked up by the generator loop
+      },
+    });
 
-      logger.info("Route completed", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId }, status: 201, durationMs: Date.now() - start });
-      return NextResponse.json(
-        {
-          userNode: serializeNode(userNode),
-          assistantNode: serializeNode(assistantNode),
-          ...(generatedTitle !== null && { generatedTitle }),
-        },
-        { status: 201 }
-      );
-    } catch (llmError: any) {
-      logger.error("LLM call failed", { context: { route, method: "POST", userId: session.user.id, requestId, conversationId }, provider, model, error: llmError?.message, stack: llmError?.stack });
-      // Clean up the user node on LLM failure to avoid orphaned branches
-      await Node.deleteOne({ _id: userNode._id });
-      // If this was the first message, reset rootNodeId
-      if (parentNodeId === null) {
-        await Conversation.findByIdAndUpdate(conversationId, { rootNodeId: null });
-      }
-
-      if (llmError?.status === 429) {
-        return NextResponse.json(
-          { error: `Rate limited by ${provider}.` },
-          { status: 429 }
-        );
-      }
-      if (llmError?.status === 401) {
-        return NextResponse.json(
-          { error: "Invalid API key" },
-          { status: 502 }
-        );
-      }
-      return NextResponse.json(
-        { error: `${provider} API error` },
-        { status: 502 }
-      );
-    }
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "POST", requestId }, error: error?.message, stack: error?.stack });
     if (error?.name === "CastError") {
-      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
+      return Response.json({ error: "Invalid ID format" }, { status: 400 });
     }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

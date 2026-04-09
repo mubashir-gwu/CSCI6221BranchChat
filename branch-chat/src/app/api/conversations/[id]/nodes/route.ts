@@ -40,13 +40,14 @@ export async function GET(
 
     logger.info("Route completed", { context: { route, method: "GET", userId: session.user.id, requestId, conversationId: id }, status: 200, nodeCount: nodes.length, durationMs: Date.now() - start });
     return NextResponse.json({
-      nodes: nodes.map((n) => ({
+      nodes: nodes.map((n: any) => ({
         id: n._id.toString(),
         parentId: n.parentId?.toString() ?? null,
         role: n.role,
         content: n.content,
         provider: n.provider ?? null,
         model: n.model ?? null,
+        ...(n.attachments?.length ? { attachments: n.attachments } : {}),
         createdAt: n.createdAt.toISOString(),
       })),
     });

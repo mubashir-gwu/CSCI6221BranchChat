@@ -10,6 +10,7 @@ interface StreamingChatRequest {
   content: string;
   provider: string;
   model: string;
+  attachments?: { filename: string; mimeType: string; data: string; size: number }[];
 }
 
 interface DoneEventData {

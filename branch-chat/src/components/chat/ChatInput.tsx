@@ -4,10 +4,18 @@ import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { SendIcon, SquareIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
+import FileUploadArea from "./FileUploadArea";
 import type { StreamingState } from "@/hooks/useStreamingChat";
 
+interface AttachmentData {
+  filename: string;
+  mimeType: string;
+  data: string;
+  size: number;
+}
+
 interface ChatInputProps {
-  onSend: (content: string, provider: string, model: string) => void;
+  onSend: (content: string, provider: string, model: string, attachments?: AttachmentData[]) => void;
   disabled: boolean;
   defaultProvider: string;
   defaultModel: string;
@@ -15,6 +23,20 @@ interface ChatInputProps {
   streamingState?: StreamingState;
   onStopStreaming?: () => void;
   restoredMessage?: string;
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Strip the data URI prefix: "data:...;base64,"
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function ChatInput({
@@ -28,6 +50,7 @@ export default function ChatInput({
   restoredMessage,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [selection, setSelection] = useState({
     provider: defaultProvider,
     model: defaultModel,
@@ -49,12 +72,26 @@ export default function ChatInput({
   const isProviderUnavailable =
     !selection.provider || !availableProviders.includes(selection.provider);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = message.trim();
     if (!trimmed || isDisabled || isProviderUnavailable) return;
-    onSend(trimmed, selection.provider, selection.model);
+
+    let attachments: AttachmentData[] | undefined;
+    if (files.length > 0) {
+      attachments = await Promise.all(
+        files.map(async (file) => ({
+          filename: file.name,
+          mimeType: file.type || 'text/plain',
+          data: await readFileAsBase64(file),
+          size: file.size,
+        }))
+      );
+    }
+
+    onSend(trimmed, selection.provider, selection.model, attachments);
     setMessage("");
-  }, [message, isDisabled, isProviderUnavailable, onSend, selection]);
+    setFiles([]);
+  }, [message, files, isDisabled, isProviderUnavailable, onSend, selection]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -66,6 +103,11 @@ export default function ChatInput({
   return (
     <div className="border-t bg-background p-4">
       <div className="flex items-end gap-2">
+        <FileUploadArea
+          files={files}
+          onFilesChange={setFiles}
+          disabled={isDisabled}
+        />
         <textarea
           className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           placeholder="Type a message..."
@@ -96,6 +138,11 @@ export default function ChatInput({
           </Button>
         )}
       </div>
+      {files.length > 0 && (
+        <div className="mt-1">
+          {/* File preview chips are rendered inside FileUploadArea */}
+        </div>
+      )}
       <div className="mt-2">
         <ModelSelector
           value={selection}

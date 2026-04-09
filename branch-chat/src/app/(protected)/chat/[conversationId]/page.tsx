@@ -23,6 +23,7 @@ function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
     content: n.content,
     provider: n.provider,
     model: n.model,
+    ...(n.attachments?.length ? { attachments: n.attachments } : {}),
     createdAt: n.createdAt,
   };
 }
@@ -123,7 +124,7 @@ export default function ChatPage() {
     uiState.selectedModel;
 
   const handleSend = useCallback(
-    async (content: string, provider: string, model: string) => {
+    async (content: string, provider: string, model: string, attachments?: { filename: string; mimeType: string; data: string; size: number }[]) => {
       setRestoredMessage('');
       const tempId = `temp-${Date.now()}`;
       const optimisticNode: TreeNode = {
@@ -140,7 +141,7 @@ export default function ChatPage() {
       dispatch({ type: "ADD_NODES", payload: [optimisticNode] });
       dispatch({ type: "SET_ACTIVE_NODE", payload: tempId });
 
-      const retry = () => handleSend(content, provider, model);
+      const retry = () => handleSend(content, provider, model, attachments);
 
       const result = await sendStreamingMessage({
         conversationId,
@@ -148,6 +149,7 @@ export default function ChatPage() {
         content,
         provider,
         model,
+        ...(attachments?.length ? { attachments } : {}),
       });
 
       // Remove optimistic node

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatMessage from "./ChatMessage";
 import LoadingIndicator from "./LoadingIndicator";
 import type { TreeNode, ChildrenMap } from "@/types/tree";
+import type { StreamingState } from "@/hooks/useStreamingChat";
 
 interface ChatPanelProps {
   activePath: TreeNode[];
@@ -14,6 +15,8 @@ interface ChatPanelProps {
   onNavigateToNode?: (nodeId: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   isLoading: boolean;
+  streamingContent?: string;
+  streamingState?: StreamingState;
 }
 
 export default function ChatPanel({
@@ -24,15 +27,18 @@ export default function ChatPanel({
   onNavigateToNode,
   onDeleteNode,
   isLoading,
+  streamingContent,
+  streamingState,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isStreaming = streamingState === 'streaming';
 
-  // Auto-scroll to bottom on new messages or loading state change
+  // Auto-scroll to bottom on new messages, loading state change, or streaming content
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activePath.length, isLoading]);
+  }, [activePath.length, isLoading, streamingContent]);
 
-  if (activePath.length === 0 && !isLoading) {
+  if (activePath.length === 0 && !isLoading && !isStreaming) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
         <p>Send a message to start the conversation.</p>
@@ -64,7 +70,23 @@ export default function ChatPanel({
             />
           );
         })}
-        {isLoading && <LoadingIndicator />}
+        {isStreaming && (
+          <div className="flex justify-start mb-4">
+            <div className="relative max-w-[80%] rounded-lg px-4 py-3 bg-muted border-l-4 border-l-muted-foreground/30">
+              {streamingContent ? (
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <p className="whitespace-pre-wrap">
+                    {streamingContent}
+                    <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+                  </p>
+                </div>
+              ) : (
+                <LoadingIndicator />
+              )}
+            </div>
+          </div>
+        )}
+        {isLoading && !isStreaming && <LoadingIndicator />}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>

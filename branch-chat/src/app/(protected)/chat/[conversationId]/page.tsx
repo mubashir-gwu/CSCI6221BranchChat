@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
 import { useActivePath } from "@/hooks/useActivePath";
+import { useStreamingChat } from "@/hooks/useStreamingChat";
 import { buildChildrenMap, findDeepestLeaf, findDescendants } from "@/lib/tree";
 import { Button } from "@/components/ui/button";
 import ChatPanel from "@/components/chat/ChatPanel";
@@ -32,6 +33,13 @@ export default function ChatPage() {
 
   const { state, dispatch } = useConversation();
   const { state: uiState, dispatch: uiDispatch } = useUI();
+  const {
+    sendStreamingMessage,
+    streamingContent,
+    streamingState,
+    streamingError,
+    abortStream,
+  } = useStreamingChat();
 
   // Load nodes on mount
   useEffect(() => {
@@ -130,101 +138,80 @@ export default function ChatPage() {
       // Show user message immediately
       dispatch({ type: "ADD_NODES", payload: [optimisticNode] });
       dispatch({ type: "SET_ACTIVE_NODE", payload: tempId });
-      uiDispatch({ type: "SET_LOADING", payload: true });
 
       const retry = () => handleSend(content, provider, model);
 
-      try {
-        const res = await fetch("/api/llm/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId,
-            parentNodeId: state.activeNodeId,
-            content,
-            provider,
-            model,
-          }),
-        });
+      const doneData = await sendStreamingMessage({
+        conversationId,
+        parentNodeId: state.activeNodeId,
+        content,
+        provider,
+        model,
+      });
 
-        // Remove optimistic node before adding real ones
-        dispatch({ type: "REMOVE_NODES", payload: [tempId] });
+      // Remove optimistic node
+      dispatch({ type: "REMOVE_NODES", payload: [tempId] });
 
-        if (!res.ok) {
-          dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
+      if (!doneData) {
+        // Error or abort
+        dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
 
-          const status = res.status;
-          let errorMsg: string;
-          let showRetry = false;
-
-          if (status === 422) {
-            errorMsg = `Provider ${provider} is not available.`;
-            toast.error(errorMsg);
-            return;
-          } else if (status === 429) {
-            errorMsg = `Rate limited by ${provider}. Please try again in a moment.`;
-            showRetry = true;
-          } else if (status === 502) {
-            const data = await res.json().catch(() => null);
-            const serverMsg = data?.error ?? "";
-            errorMsg = serverMsg.toLowerCase().includes("invalid api key")
-              ? `Invalid API key for ${provider}. Contact your administrator.`
-              : `${provider} API error. Please try again.`;
-          } else if (status === 504) {
-            errorMsg = "Request timed out. The model took too long to respond.";
-            showRetry = true;
-          } else {
-            const data = await res.json().catch(() => null);
-            errorMsg = data?.error || "Failed to send message";
-          }
-
-          if (showRetry) {
+        if (streamingError) {
+          const errorMsg = streamingError;
+          if (errorMsg.includes("not configured")) {
+            toast.error(`Provider ${provider} is not available.`);
+          } else if (errorMsg.includes("Rate limited")) {
             toast.error(errorMsg, {
               action: { label: "Retry", onClick: retry },
             });
+          } else if (errorMsg.toLowerCase().includes("invalid api key")) {
+            toast.error(`Invalid API key for ${provider}. Contact your administrator.`);
           } else {
-            toast.error(errorMsg);
+            toast.error(errorMsg, {
+              action: { label: "Retry", onClick: retry },
+            });
           }
-          return;
         }
+        return;
+      }
 
-        const data = await res.json();
-        const userNode = nodeResponseToTreeNode(data.userNode);
-        const assistantNode = nodeResponseToTreeNode(data.assistantNode);
+      const userNode = nodeResponseToTreeNode(doneData.userNode);
+      const assistantNode = nodeResponseToTreeNode(doneData.assistantNode);
 
-        dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
-        dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
-        window.location.hash = assistantNode.id;
+      dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
+      dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
+      window.location.hash = assistantNode.id;
 
-        // Update selected model to match what was just used
-        uiDispatch({
-          type: "SET_SELECTED_MODEL",
-          payload: { provider, model },
-        });
+      // Update selected model to match what was just used
+      uiDispatch({
+        type: "SET_SELECTED_MODEL",
+        payload: { provider, model },
+      });
 
-        // Update sidebar title if auto-title was generated
-        if (data.generatedTitle) {
-          dispatch({
-            type: "UPDATE_CONVERSATION",
-            payload: {
-              id: conversationId,
-              title: data.generatedTitle,
-              updatedAt: new Date().toISOString(),
-            },
-          });
+      // Check if title may have been auto-generated (fetch fresh conversation)
+      try {
+        const convRes = await fetch(`/api/conversations`);
+        if (convRes.ok) {
+          const convData = await convRes.json();
+          const updated = convData.conversations?.find(
+            (c: any) => c.id === conversationId
+          );
+          if (updated && updated.title !== conversation?.title) {
+            dispatch({
+              type: "UPDATE_CONVERSATION",
+              payload: {
+                id: conversationId,
+                title: updated.title,
+                updatedAt: updated.updatedAt,
+              },
+            });
+          }
         }
       } catch {
-        dispatch({ type: "REMOVE_NODES", payload: [tempId] });
-        dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
-        toast.error(
-          "Network error. Please check your connection and try again.",
-          { action: { label: "Retry", onClick: retry } }
-        );
-      } finally {
-        uiDispatch({ type: "SET_LOADING", payload: false });
+        // Non-critical — title refresh can fail silently
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch]
+    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, streamingError, conversation?.title]
   );
 
   const handleBranchNavigate = useCallback(
@@ -305,6 +292,8 @@ export default function ChatPage() {
     [conversationId, childrenMap, dispatch]
   );
 
+  const isStreaming = streamingState === 'streaming';
+
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -325,14 +314,18 @@ export default function ChatPage() {
             onNavigateToNode={handleTreeNodeClick}
             onDeleteNode={handleDeleteNode}
             isLoading={uiState.isLoading}
+            streamingContent={streamingContent}
+            streamingState={streamingState}
           />
         </div>
         <ChatInput
           onSend={handleSend}
-          disabled={uiState.isLoading}
+          disabled={uiState.isLoading || isStreaming}
           defaultProvider={defaultProvider}
           defaultModel={defaultModel}
           availableProviders={availableProviders}
+          streamingState={streamingState}
+          onStopStreaming={abortStream}
         />
       </div>
       <TreeSidebar

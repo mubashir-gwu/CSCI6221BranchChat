@@ -1053,3 +1053,27 @@ Updated the Gemini model entry in:
 - `npm run build` passes
 - 2/2 fixes applied successfully
 - No new concerns
+
+---
+
+## F-21: Prompt Caching (Claude-only)
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### T-106: Add cache_control Breakpoints to Anthropic Provider
+- Extracted `buildAnthropicMessages()` and `buildSystemParam()` helpers in `src/lib/providers/anthropic.ts`
+- Added `cache_control: { type: "ephemeral" }` to system prompt content block (when present) and last message content block
+- Applied to both `sendMessage` and `streamMessage` methods
+- Exactly 2 breakpoints used per request (within Claude's max of 4)
+- No cache_control persisted to database — added dynamically at request time
+- `npm run build` passes
+
+### T-107: Write Tests for Prompt Caching
+- Created `__tests__/lib/providers/anthropic.test.ts` with 7 tests
+- Mocked Anthropic SDK to capture request payloads
+- Verified cache_control on system content block for both sendMessage and streamMessage
+- Verified cache_control on last message content block for both methods
+- Verified no system cache_control when system prompt is absent
+- Verified exactly 2 breakpoints when system prompt is present
+- All 7 tests pass, `npm run build` passes

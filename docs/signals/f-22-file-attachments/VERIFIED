@@ -1,5 +1,0 @@
-Audit passed. Both medium-severity issues from Cycle 1 have been fixed.
-
-Low-severity notes:
-1. URL.createObjectURL memory leak in FileUploadArea.tsx — negligible impact with ≤5 files cleared on send.
-2. Test fixtures in attachmentFormatter.test.ts omit `size` field from LLMAttachment type — tests pass at runtime, build succeeds.

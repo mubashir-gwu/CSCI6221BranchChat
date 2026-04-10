@@ -1,0 +1,18 @@
+1. **Fix: Revoke blob URLs in FileUploadArea**
+   - File: `src/components/chat/FileUploadArea.tsx`, line 133
+   - Issue: `URL.createObjectURL(file)` is called for image thumbnails on every render but `URL.revokeObjectURL()` is never called, leaking blob URLs in memory.
+   - Fix: Use `useMemo` (or `useState` + `useEffect`) to create blob URLs for the current `files` array and revoke previous URLs on cleanup. For example, memoize a `Map<File, string>` of blob URLs keyed by file, and revoke all URLs in the cleanup function. Then reference the memoized URL in the `<img src>` instead of calling `URL.createObjectURL` inline.
+
+2. **Fix: Add missing `size` field to test fixtures**
+   - File: `__tests__/lib/providers/attachmentFormatter.test.ts`, lines 5-37 and line 141
+   - Issue: All `LLMAttachment` test fixtures (`imageAttachment`, `pdfAttachment`, `textAttachment`, `markdownAttachment`, `csvAttachment`, and the inline fixture at line 141) are typed as `LLMAttachment` but omit the required `size: number` field, producing `TS2741` errors.
+   - Fix: Add `size` to each fixture. Use the byte length of the base64-decoded data, or any reasonable number (e.g., `1024`). Example:
+     ```typescript
+     const imageAttachment: LLMAttachment = {
+       filename: "photo.png",
+       mimeType: "image/png",
+       data: "iVBORw0KGgoAAAANSUhEUg==",
+       size: 1024,
+     };
+     ```
+     Apply the same to all six fixtures.

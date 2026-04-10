@@ -223,14 +223,16 @@ Branching = insert node with `parentId` → branch point. No other nodes modifie
 interface ITokenUsage {
     userId: Types.ObjectId;
     provider: 'openai' | 'anthropic' | 'gemini' | 'mock';
+    model: string;
     inputTokens: number;
     outputTokens: number;
     callCount: number;
     updatedAt: Date;
 }
 // { timestamps: { createdAt: false, updatedAt: true } }.
-// Index: { userId: 1, provider: 1 } unique compound.
-// Upsert on every LLM call with $inc: { inputTokens, outputTokens, callCount: 1 }.
+// Index: { userId: 1, model: 1 } unique compound.
+// Index: { userId: 1, provider: 1 } non-unique (for aggregation queries).
+// Upsert on every LLM call with filter { userId, model }, $inc: { inputTokens, outputTokens, callCount: 1 }, $set: { provider }.
 ```
 
 ---
@@ -255,7 +257,7 @@ All routes require auth unless PUBLIC. Return 401 if no session, 403 if wrong ow
 
 **GET `/api/providers`** → `{ providers: string[] }`. Returns available providers based on env vars. Always includes `"mock"` when `NODE_ENV === 'development'`.
 
-**GET `/api/token-usage`** → `{ usage: { provider, inputTokens, outputTokens, callCount }[] }`. Returns all TokenUsage docs for the authenticated user.
+**GET `/api/token-usage`** → `{ usage: { model, provider, inputTokens, outputTokens, callCount }[] }`. Returns all TokenUsage docs for the authenticated user, keyed per-model with provider as metadata.
 
 **POST `/api/llm/chat`** — `maxDuration = 60`
 

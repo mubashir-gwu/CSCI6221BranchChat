@@ -66,6 +66,7 @@ export default function TreeVisualization({
       <Controls showInteractive={false}>
         <ControlButton
           onClick={toggleMinimap}
+          title={isMinimapVisible ? 'Hide minimap' : 'Show minimap'}
           aria-label={isMinimapVisible ? 'Hide minimap' : 'Show minimap'}
         >
           {isMinimapVisible ? <Map className="h-3.5 w-3.5" style={{ fill: 'none' }} /> : <MapMinus className="h-3.5 w-3.5" style={{ fill: 'none' }} />}

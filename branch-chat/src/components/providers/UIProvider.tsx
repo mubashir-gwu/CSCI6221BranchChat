@@ -8,7 +8,7 @@ const initialState: UIState = {
   isLoading: false,
   isSidebarOpen: true,
   isTreeOpen: false,
-  isMinimapVisible: true,
+  isMinimapVisible: false,
   selectedProvider: "openai",
   selectedModel: "gpt-4o",
   availableProviders: [],

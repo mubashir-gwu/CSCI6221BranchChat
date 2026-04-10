@@ -126,6 +126,7 @@ export default function ChatPage() {
   const handleSend = useCallback(
     async (content: string, provider: string, model: string, attachments?: { filename: string; mimeType: string; data: string; size: number }[]) => {
       setRestoredMessage('');
+      setPreviousActiveNodeId(null);
       const tempId = `temp-${Date.now()}`;
       const optimisticNode: TreeNode = {
         id: tempId,
@@ -235,6 +236,25 @@ export default function ChatPage() {
     [dispatch]
   );
 
+  const [previousActiveNodeId, setPreviousActiveNodeId] = useState<string | null>(null);
+
+  const handleBranchFromHere = useCallback(
+    (nodeId: string) => {
+      setPreviousActiveNodeId(state.activeNodeId);
+      dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
+      window.location.hash = nodeId;
+    },
+    [state.activeNodeId, dispatch]
+  );
+
+  const handleGoBack = useCallback(() => {
+    if (previousActiveNodeId) {
+      dispatch({ type: "SET_ACTIVE_NODE", payload: previousActiveNodeId });
+      window.location.hash = previousActiveNodeId;
+      setPreviousActiveNodeId(null);
+    }
+  }, [previousActiveNodeId, dispatch]);
+
   const handleToggleTree = useCallback(() => {
     uiDispatch({ type: "TOGGLE_TREE" });
   }, [uiDispatch]);
@@ -315,7 +335,9 @@ export default function ChatPage() {
             childrenMap={childrenMap}
             nodesMap={state.nodes}
             onBranchNavigate={handleBranchNavigate}
-            onNavigateToNode={handleTreeNodeClick}
+            onNavigateToNode={handleBranchFromHere}
+            onBranchFromHere={handleBranchFromHere}
+            onGoBack={previousActiveNodeId ? handleGoBack : undefined}
             onDeleteNode={handleDeleteNode}
             isLoading={uiState.isLoading}
             streamingContent={streamingContent}

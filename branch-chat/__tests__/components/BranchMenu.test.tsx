@@ -38,7 +38,7 @@ describe("BranchMenu", () => {
       />
     );
 
-    expect(screen.getByText("+ New branch from here")).toBeDefined();
+    expect(screen.getByText("New branch from here")).toBeDefined();
   });
 
   it("does not render 'New branch from here' when onNavigateToNode is not provided", () => {
@@ -51,7 +51,7 @@ describe("BranchMenu", () => {
       />
     );
 
-    expect(screen.queryByText("+ New branch from here")).toBeNull();
+    expect(screen.queryByText("New branch from here")).toBeNull();
   });
 
   it("calls onNavigateToNode with parentNodeId when 'New branch from here' is clicked", () => {
@@ -67,7 +67,7 @@ describe("BranchMenu", () => {
       />
     );
 
-    fireEvent.click(screen.getByText("+ New branch from here"));
+    fireEvent.click(screen.getByText("New branch from here"));
     expect(onNavigate).toHaveBeenCalledWith(parent);
   });
 

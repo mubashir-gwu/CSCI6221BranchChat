@@ -1,5 +1,6 @@
 "use client";
 
+import { GitBranchPlus } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
 import type { TreeNode } from "@/types/tree";
 
@@ -63,7 +64,8 @@ export default function BranchMenu({
             onClick={() => onNavigateToNode(parentNodeId)}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            + New branch from here
+            <GitBranchPlus className="h-3.5 w-3.5" />
+            New branch from here
           </button>
         </>
       )}

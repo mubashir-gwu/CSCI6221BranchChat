@@ -5,8 +5,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Trash2Icon, FileText, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2Icon, FileText, ChevronDown, ChevronRight, GitBranchPlus, Undo2 } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
+import { Badge } from "@/components/ui/badge";
 import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
 import CopyMarkdownButton from "./CopyMarkdownButton";
@@ -19,8 +20,11 @@ interface ChatMessageProps {
   childNodes: TreeNode[];
   activeChildId: string | null;
   isActive: boolean;
+  isLast: boolean;
   onBranchClick: (nodeId: string) => void;
   onNavigateToNode?: (nodeId: string) => void;
+  onBranchFromHere?: (nodeId: string) => void;
+  onGoBack?: () => void;
   onDelete?: (nodeId: string) => void;
 }
 
@@ -30,8 +34,11 @@ export default function ChatMessage({
   childNodes,
   activeChildId,
   isActive,
+  isLast,
   onBranchClick,
   onNavigateToNode,
+  onBranchFromHere,
+  onGoBack,
   onDelete,
 }: ChatMessageProps) {
   const [showBranchMenu, setShowBranchMenu] = useState(false);
@@ -159,6 +166,26 @@ export default function ChatMessage({
               </div>
             )}
           </div>
+        )}
+
+        {/* Go back button when navigated via "branch from here" */}
+        {!isUser && isActive && onGoBack && (
+          <button onClick={onGoBack} className="mt-2 cursor-pointer">
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <Undo2 className="h-3 w-3" />
+              Go back to previous branch
+            </Badge>
+          </button>
+        )}
+
+        {/* New branch button for assistant messages (not last, not showing go-back) */}
+        {!isUser && childCount <= 1 && !isLast && !(isActive && onGoBack) && onBranchFromHere && (
+          <button onClick={() => onBranchFromHere(node.id)} className="mt-2 cursor-pointer">
+            <Badge variant="secondary" className="gap-1 text-xs">
+              <GitBranchPlus className="h-3 w-3" />
+              New branch from here
+            </Badge>
+          </button>
         )}
 
         {/* Action buttons (visible on hover) */}

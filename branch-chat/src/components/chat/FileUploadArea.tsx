@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, type DragEvent } from "react";
+import { useRef, useCallback, useMemo, useEffect, type DragEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Paperclip, X, FileText, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -98,6 +98,25 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
 
   const isImage = (file: File) => file.type.startsWith('image/');
 
+  // Memoize blob URLs and revoke previous ones on cleanup
+  const blobUrlMap = useMemo(() => {
+    const map = new Map<File, string>();
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        map.set(file, URL.createObjectURL(file));
+      }
+    }
+    return map;
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      for (const url of blobUrlMap.values()) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [blobUrlMap]);
+
   return (
     <div onDragOver={handleDragOver} onDrop={handleDrop}>
       <input
@@ -130,7 +149,7 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
             >
               {isImage(file) ? (
                 <img
-                  src={URL.createObjectURL(file)}
+                  src={blobUrlMap.get(file) ?? ''}
                   alt={file.name}
                   className="h-6 w-6 rounded object-cover"
                 />

@@ -6,12 +6,14 @@ const imageAttachment: LLMAttachment = {
   filename: "photo.png",
   mimeType: "image/png",
   data: "iVBORw0KGgoAAAANSUhEUg==",
+  size: 1024,
 };
 
 const pdfAttachment: LLMAttachment = {
   filename: "document.pdf",
   mimeType: "application/pdf",
   data: "JVBERi0xLjQK",
+  size: 2048,
 };
 
 // "Hello World" in base64
@@ -22,18 +24,21 @@ const textAttachment: LLMAttachment = {
   filename: "notes.txt",
   mimeType: "text/plain",
   data: textBase64,
+  size: 11,
 };
 
 const markdownAttachment: LLMAttachment = {
   filename: "readme.md",
   mimeType: "text/markdown",
   data: textBase64,
+  size: 11,
 };
 
 const csvAttachment: LLMAttachment = {
   filename: "data.csv",
   mimeType: "text/csv",
   data: textBase64,
+  size: 11,
 };
 
 describe("formatAttachmentsForProvider", () => {
@@ -138,7 +143,7 @@ describe("formatAttachmentsForProvider", () => {
     it("correctly decodes base64 to UTF-8 text", () => {
       const originalText = "Line 1\nLine 2\nSpecial chars: éàü";
       const encoded = Buffer.from(originalText).toString("base64");
-      const att: LLMAttachment = { filename: "test.txt", mimeType: "text/plain", data: encoded };
+      const att: LLMAttachment = { filename: "test.txt", mimeType: "text/plain", data: encoded, size: 33 };
 
       const result = formatAttachmentsForProvider([att], "anthropic") as any[];
       expect(result[0].text).toContain(originalText);

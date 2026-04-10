@@ -1154,3 +1154,15 @@ Updated the Gemini model entry in:
 
 ### New Concerns
 - None observed
+
+## F-22: File Attachments — Audit Cycle 2 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### Fixes Applied (2/2)
+1. Fixed blob URL memory leak in `FileUploadArea.tsx` — replaced inline `URL.createObjectURL()` calls with a memoized `Map<File, string>` via `useMemo`, with `useEffect` cleanup that revokes all URLs when the files array changes
+2. Added missing `size` field to all 6 `LLMAttachment` test fixtures in `attachmentFormatter.test.ts` — resolves TS2741 errors
+
+### New Concerns
+- None observed

@@ -62,10 +62,27 @@ export default function ChatMessage({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showBranchMenu]);
 
+  const actionButtons = (
+    <div className="hidden flex-col items-center gap-1 group-hover:flex">
+      <CopyMarkdownButton content={node.content} />
+      {onDelete && isUser && (
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-red-400/70 transition-colors hover:text-red-500"
+          title="Delete message and replies"
+          aria-label="Delete message and replies"
+        >
+          <Trash2Icon className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div
-      className={`group flex ${isUser ? "justify-end" : "justify-start"} mb-4`}
+      className={`group flex items-start gap-2 ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
+      {isUser && actionButtons}
       <div
         className={`relative max-w-[80%] rounded-lg px-4 py-3 ${
           isUser
@@ -188,23 +205,8 @@ export default function ChatMessage({
           </button>
         )}
 
-        {/* Action buttons (visible on hover) */}
-        <div className="absolute -top-2 -right-2 hidden gap-1 group-hover:flex">
-          <div className="rounded-full bg-card border border-border p-1 shadow-sm">
-            <CopyMarkdownButton content={node.content} />
-          </div>
-          {onDelete && isUser && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="rounded-full bg-card border border-border p-1 text-red-400/70 shadow-sm transition-colors hover:text-red-500"
-              title="Delete message and replies"
-              aria-label="Delete message and replies"
-            >
-              <Trash2Icon className="h-3 w-3" />
-            </button>
-          )}
-        </div>
       </div>
+      {!isUser && actionButtons}
 
       {/* Delete confirmation dialog */}
       {onDelete && isUser && (

@@ -17,6 +17,7 @@ interface DoneEventData {
   userNode: any;
   assistantNode: any;
   tokenUsage: { inputTokens: number; outputTokens: number };
+  generatedTitle?: string;
 }
 
 export type StreamingResult =
@@ -152,6 +153,11 @@ export function useStreamingChat() {
             setStreamingContent(parsed.assistantNode?.content ?? contentRef.current);
             doneData = parsed;
             setStreamingState('idle');
+          } else if (event === 'title') {
+            // Auto-generated title arrived — attach to done data
+            if (doneData) {
+              doneData.generatedTitle = parsed.title;
+            }
           } else if (event === 'error') {
             if (flushTimerRef.current) {
               clearTimeout(flushTimerRef.current);

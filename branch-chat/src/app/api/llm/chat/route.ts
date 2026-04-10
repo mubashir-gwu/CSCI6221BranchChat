@@ -305,17 +305,24 @@ export async function POST(request: Request) {
                 }))
               );
 
-              // Auto-title (fire-and-forget, non-streaming)
+              // Auto-title: await and send via SSE so client gets it deterministically
               if (conversation.title === "New Conversation") {
-                generateTitle(
-                  conversationId,
-                  content.trim(),
-                  provider,
-                  model,
-                  userId
-                ).catch((titleErr: any) => {
+                try {
+                  const generatedTitle = await generateTitle(
+                    conversationId,
+                    content.trim(),
+                    provider,
+                    model,
+                    userId
+                  );
+                  if (generatedTitle) {
+                    controller.enqueue(
+                      encoder.encode(encodeSSEEvent('title', { title: generatedTitle }))
+                    );
+                  }
+                } catch (titleErr: any) {
                   logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
-                });
+                }
               }
             } else if (chunk.type === 'error') {
               // Provider error — nothing saved to DB, just report

@@ -193,30 +193,19 @@ export default function ChatPage() {
         payload: { provider, model },
       });
 
-      // Check if title may have been auto-generated (fetch fresh conversation)
-      try {
-        const convRes = await fetch(`/api/conversations`);
-        if (convRes.ok) {
-          const convData = await convRes.json();
-          const updated = convData.conversations?.find(
-            (c: any) => c.id === conversationId
-          );
-          if (updated && updated.title !== conversation?.title) {
-            dispatch({
-              type: "UPDATE_CONVERSATION",
-              payload: {
-                id: conversationId,
-                title: updated.title,
-                updatedAt: updated.updatedAt,
-              },
-            });
-          }
-        }
-      } catch {
-        // Non-critical — title refresh can fail silently
+      // Update sidebar title if auto-title was generated
+      if (result.data.generatedTitle) {
+        dispatch({
+          type: "UPDATE_CONVERSATION",
+          payload: {
+            id: conversationId,
+            title: result.data.generatedTitle,
+            updatedAt: new Date().toISOString(),
+          },
+        });
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, conversation?.title]
+    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage]
   );
 
   const handleBranchNavigate = useCallback(

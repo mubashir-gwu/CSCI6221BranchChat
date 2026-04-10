@@ -110,7 +110,7 @@ export default function ChatMessage({
 
         {/* Message content with Markdown rendering */}
         <div
-          className={`prose prose-sm prose-code:text-sm prose-pre:overflow-x-auto prose-pre:border-0 prose-pre:bg-transparent prose-pre:p-0 max-w-none wrap-break-word ${
+          className={`prose prose-sm prose-code:text-sm prose-pre:overflow-x-auto prose-pre:bg-[#282c34] prose-pre:text-[#abb2bf] prose-pre:border-0 prose-pre:rounded-lg max-w-none wrap-break-word ${
             isUser
               ? "prose-invert prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground prose-code:text-primary-foreground prose-li:text-primary-foreground prose-ul:marker:text-primary-foreground prose-ol:marker:text-primary-foreground prose-a:text-primary-foreground prose-blockquote:text-primary-foreground prose-th:text-primary-foreground prose-td:text-primary-foreground prose-em:text-primary-foreground"
               : "dark:prose-invert"
@@ -129,7 +129,7 @@ export default function ChatMessage({
                       style={oneDark}
                       language={match[1]}
                       PreTag="div"
-                      customStyle={{ fontSize: "0.925rem" }}
+                      customStyle={{ fontSize: "0.925rem", margin: 0, padding: 0, background: "transparent" }}
                     >
                       {codeString}
                     </SyntaxHighlighter>

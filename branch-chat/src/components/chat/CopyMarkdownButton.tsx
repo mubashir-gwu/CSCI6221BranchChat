@@ -20,6 +20,7 @@ export default function CopyMarkdownButton({ content }: CopyMarkdownButtonProps)
     <button
       onClick={handleCopy}
       className="text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+      title={copied ? "Copied" : "Copy markdown"}
       aria-label={copied ? "Copied" : "Copy markdown"}
     >
       {copied ? (

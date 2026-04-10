@@ -42,13 +42,14 @@ async function generateTitle(
   // Track token usage for the title generation call
   if (response.inputTokens || response.outputTokens) {
     await TokenUsage.findOneAndUpdate(
-      { userId, provider },
+      { userId, model },
       {
         $inc: {
           inputTokens: response.inputTokens || 0,
           outputTokens: response.outputTokens || 0,
           callCount: 1,
         },
+        $set: { provider },
       },
       { upsert: true }
     );
@@ -275,13 +276,14 @@ export async function POST(request: Request) {
               // Track token usage
               try {
                 await TokenUsage.findOneAndUpdate(
-                  { userId, provider },
+                  { userId, model },
                   {
                     $inc: {
                       inputTokens: chunk.inputTokens ?? 0,
                       outputTokens: chunk.outputTokens ?? 0,
                       callCount: 1,
                     },
+                    $set: { provider },
                   },
                   { upsert: true }
                 );

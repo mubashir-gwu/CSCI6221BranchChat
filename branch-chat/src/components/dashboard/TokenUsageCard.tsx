@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PROVIDERS } from "@/constants/providers";
+import { MODELS } from "@/constants/models";
 
 interface UsageEntry {
   model: string;
@@ -42,6 +43,16 @@ export default function TokenUsageCard() {
     }
 
     fetchData();
+  }, []);
+
+  const modelDisplayNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const models of Object.values(MODELS)) {
+      for (const m of models) {
+        map[m.id] = m.name;
+      }
+    }
+    return map;
   }, []);
 
   const groupedUsage = useMemo(() => {
@@ -97,7 +108,7 @@ export default function TokenUsageCard() {
                 <div className="space-y-3">
                   {modelEntries.map((entry) => (
                     <div key={entry.model}>
-                      <p className="text-sm font-medium mb-1">{entry.model}</p>
+                      <p className="text-sm font-medium mb-1">{modelDisplayNames[entry.model] ?? entry.model}</p>
                       <div className="space-y-1 text-sm pl-3">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Input tokens</span>

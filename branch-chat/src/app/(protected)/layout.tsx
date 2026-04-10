@@ -18,7 +18,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       {uiState.isSidebarOpen && (
         <aside className="flex w-64 flex-col border-r bg-muted/30">
-          <div className="flex items-center justify-between border-b px-3 py-2">
+          <div className="flex h-11 items-center justify-between border-b px-3">
             <Link href="/dashboard" className="text-lg font-semibold hover:opacity-80">BranchChat</Link>
             <ThemeToggle />
           </div>
@@ -51,7 +51,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       <main className="relative flex-1 overflow-auto">
         <button
           onClick={() => uiDispatch({ type: "TOGGLE_SIDEBAR" })}
-          className="absolute top-14 left-2 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          className="absolute top-13 left-2 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           aria-label={uiState.isSidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
           {uiState.isSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}

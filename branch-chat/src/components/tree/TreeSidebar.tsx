@@ -26,7 +26,7 @@ export default function TreeSidebar({
     <div className="relative flex h-full">
       <button
         onClick={onToggle}
-        className="absolute top-14 -left-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className="absolute top-13 -left-10 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         aria-label={isOpen ? 'Close tree view' : 'Open tree view'}
       >
         {isOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}

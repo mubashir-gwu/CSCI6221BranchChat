@@ -310,7 +310,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b px-4 py-2">
+        <div className="flex h-11 items-center justify-between border-b px-4">
           <h2 className="text-sm font-semibold truncate">
             {conversation?.title ?? "Chat"}
           </h2>

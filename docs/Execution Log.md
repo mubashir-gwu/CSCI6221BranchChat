@@ -1166,3 +1166,34 @@ Updated the Gemini model entry in:
 
 ### New Concerns
 - None observed
+
+---
+
+## F-23: Per-Model Token Usage
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### T-117: Update TokenUsage Schema for Per-Model Tracking
+- Added `model: string` field (required) to `TokenUsage` schema
+- Changed unique compound index from `{ userId, provider }` to `{ userId, model }`
+- Added non-unique index `{ userId, provider }` for aggregation queries
+- Removed `extends Document` from `ITokenUsage` interface to avoid conflict with Mongoose's built-in `model` property on `Document`
+
+### T-118: Update Token Recording Logic in Chat Route
+- Changed stream `done` handler token recording to key by `{ userId, model }` with `$set: { provider }`
+- Updated auto-title `generateTitle()` token recording to use the same per-model key pattern
+
+### T-119: Update Token Usage API Route and Usage Page
+- API response now includes `model` field per usage entry
+- `TokenUsageCard` groups usage entries by provider with per-model breakdown (model name as sub-heading, indented stats)
+- Empty state shows "No usage data" per provider card
+
+### T-120: Write Tests for Per-Model Token Usage
+- Updated `llm-chat.test.ts` token recording assertion to verify `{ userId, model }` filter and `$set: { provider }`
+- Updated auto-title token tracking test to match new per-model key pattern
+- Updated `usage.test.ts` to verify `model` and `provider` fields in API response
+- All 186 tests pass, build passes
+
+### Known Issues
+- Existing `tokenusages` collection in MongoDB must be dropped manually (`db.tokenusages.drop()`) due to index change. This is informational-only data; loss is acceptable.

@@ -254,18 +254,19 @@ describe("POST /api/llm/chat", () => {
     expect(doneEvents[0].data.tokenUsage.outputTokens).toBe(20);
   });
 
-  it("should record token usage after successful stream", async () => {
+  it("should record token usage with per-model key after successful stream", async () => {
     const res = await POST(makeRequest(validBody));
     await collectSSEEvents(res); // consume the stream
 
     expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
-      { userId: "user-1", provider: "openai" },
+      { userId: "user-1", model: "gpt-4o" },
       {
         $inc: {
           inputTokens: 10,
           outputTokens: 20,
           callCount: 1,
         },
+        $set: { provider: "openai" },
       },
       { upsert: true }
     );
@@ -453,13 +454,14 @@ describe("POST /api/llm/chat", () => {
       // Token usage tracked for both stream and title
       expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledTimes(2);
       expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
-        { userId: "user-1", provider: "openai" },
+        { userId: "user-1", model: "gpt-4o" },
         {
           $inc: {
             inputTokens: 5,
             outputTokens: 3,
             callCount: 1,
           },
+          $set: { provider: "openai" },
         },
         { upsert: true }
       );

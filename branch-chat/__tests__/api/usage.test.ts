@@ -37,16 +37,18 @@ describe("GET /api/token-usage", () => {
     expect(res.status).toBe(401);
   });
 
-  it("should return token usage for the authenticated user", async () => {
+  it("should return per-model token usage for the authenticated user", async () => {
     mockTokenUsageFind.mockReturnValue({
       lean: () => [
         {
+          model: "gpt-4o",
           provider: "openai",
           inputTokens: 100,
           outputTokens: 200,
           callCount: 5,
         },
         {
+          model: "claude-sonnet-4-6",
           provider: "anthropic",
           inputTokens: 50,
           outputTokens: 80,
@@ -61,10 +63,18 @@ describe("GET /api/token-usage", () => {
     expect(res.status).toBe(200);
     expect(data.usage).toHaveLength(2);
     expect(data.usage[0]).toEqual({
+      model: "gpt-4o",
       provider: "openai",
       inputTokens: 100,
       outputTokens: 200,
       callCount: 5,
+    });
+    expect(data.usage[1]).toEqual({
+      model: "claude-sonnet-4-6",
+      provider: "anthropic",
+      inputTokens: 50,
+      outputTokens: 80,
+      callCount: 2,
     });
   });
 

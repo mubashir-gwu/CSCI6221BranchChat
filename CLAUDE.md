@@ -136,7 +136,7 @@ branch-chat/
 │   │
 │   ├── components/
 │   │   ├── auth/          LoginForm.tsx, RegisterForm.tsx
-│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator
+│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator, CopyMarkdownButton
 │   │   ├── tree/          TreeSidebar, TreeVisualization, TreeNode
 │   │   ├── sidebar/       ConversationList, ConversationItem
 │   │   ├── dashboard/     TokenUsageCard
@@ -418,7 +418,8 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | Component             | Props                                                      | Behavior                                                        |
 | --------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
 | **ChatPanel**         | `activePath[]`, `onBranchNavigate`                         | Maps → ChatMessage. Auto-scroll. LoadingIndicator.              |
-| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). |
+| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. |
+| **CopyMarkdownButton**| `{ content: string }`                                      | ClipboardCopy icon button. Copies raw markdown to clipboard. Swaps to Check icon for 2s. No toast. |
 | **ChatInput**         | `onSend`, `disabled`, `defaultProvider`, `defaultModel`    | Textarea + send + ModelSelector. Clears on send.                |
 | **ModelSelector**     | `value`, `onChange`, `availableProviders`                  | shadcn DropdownMenu, provider-grouped, color-coded. Unavailable providers greyed out (`opacity-50 pointer-events-none`). |
 | **BranchIndicator**   | `nodeId`, `branchCount`, `onClick`                         | Badge. Click → BranchMenu.                                      |

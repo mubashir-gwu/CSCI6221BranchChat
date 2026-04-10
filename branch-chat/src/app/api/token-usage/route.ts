@@ -26,6 +26,7 @@ export async function GET() {
     logger.info('Route completed', { context: { route, method: 'GET', userId: session.user.id, requestId }, status: 200, durationMs: Date.now() - start });
     return NextResponse.json({
       usage: usage.map((u: any) => ({
+        model: u.model,
         provider: u.provider,
         inputTokens: u.inputTokens,
         outputTokens: u.outputTokens,

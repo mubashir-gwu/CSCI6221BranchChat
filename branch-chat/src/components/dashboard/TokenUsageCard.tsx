@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PROVIDERS } from "@/constants/providers";
 
 interface UsageEntry {
+  model: string;
   provider: string;
   inputTokens: number;
   outputTokens: number;
@@ -43,6 +44,17 @@ export default function TokenUsageCard() {
     fetchData();
   }, []);
 
+  const groupedUsage = useMemo(() => {
+    const grouped: Record<string, UsageEntry[]> = {};
+    for (const entry of usage) {
+      if (!grouped[entry.provider]) {
+        grouped[entry.provider] = [];
+      }
+      grouped[entry.provider].push(entry);
+    }
+    return grouped;
+  }, [usage]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -59,7 +71,7 @@ export default function TokenUsageCard() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {allProviders.map((providerKey) => {
         const provider = PROVIDERS[providerKey as keyof typeof PROVIDERS];
-        const entry = usage.find((u) => u.provider === providerKey);
+        const modelEntries = groupedUsage[providerKey] ?? [];
         const isAvailable = availableProviders.includes(providerKey);
 
         return (
@@ -79,20 +91,31 @@ export default function TokenUsageCard() {
               )}
             </CardHeader>
             <CardContent>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Input tokens</span>
-                  <span className="font-mono">{entry?.inputTokens?.toLocaleString() ?? "0"}</span>
+              {modelEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No usage data</p>
+              ) : (
+                <div className="space-y-3">
+                  {modelEntries.map((entry) => (
+                    <div key={entry.model}>
+                      <p className="text-sm font-medium mb-1">{entry.model}</p>
+                      <div className="space-y-1 text-sm pl-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Input tokens</span>
+                          <span className="font-mono">{entry.inputTokens.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Output tokens</span>
+                          <span className="font-mono">{entry.outputTokens.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">API calls</span>
+                          <span className="font-mono">{entry.callCount.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Output tokens</span>
-                  <span className="font-mono">{entry?.outputTokens?.toLocaleString() ?? "0"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">API calls</span>
-                  <span className="font-mono">{entry?.callCount?.toLocaleString() ?? "0"}</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         );

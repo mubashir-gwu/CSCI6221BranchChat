@@ -30,7 +30,7 @@ async function generateTitle(
     {
       role: "system",
       content:
-        "Generate a concise title (max 6 words) for a conversation that starts with this message. Reply with only the title, no quotes or punctuation.",
+        "Generate a concise title (max 6 words) for the following user message sent in a chat conversation. The message may reference attached files or other context — focus on the overall topic, not the attachments. You are getting passed only the message not the file attachments. Reply with only the title, no quotes or punctuation.",
     },
     { role: "user", content: firstUserMessage },
   ];

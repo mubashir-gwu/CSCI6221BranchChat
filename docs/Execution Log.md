@@ -1197,3 +1197,22 @@ Updated the Gemini model entry in:
 
 ### Known Issues
 - Existing `tokenusages` collection in MongoDB must be dropped manually (`db.tokenusages.drop()`) due to index change. This is informational-only data; loss is acceptable.
+
+---
+
+## F-24: Copy Markdown Button
+
+**Status:** Complete  
+**Date:** 2026-04-09
+
+### T-121: Create CopyMarkdownButton Component and Add to ChatMessage
+- Created `src/components/chat/CopyMarkdownButton.tsx` with `ClipboardCopy`/`Check` icon swap (2s timeout)
+- Integrated into `ChatMessage.tsx` action area alongside delete button, visible on hover for all messages
+- Not shown during streaming (streaming content renders separately in ChatPanel, not via ChatMessage)
+- Verified react-markdown v10 `className` prop not used directly — wrapper `<div>` handles it, no fix needed
+- Build passes
+
+### T-122: Write Tests for CopyMarkdownButton
+- Created `__tests__/components/chat/CopyMarkdownButton.test.tsx` with 4 tests
+- Tests: renders clipboard icon, calls writeText with content, icon changes to check, reverts after 2s (fake timers)
+- All 190 tests pass, build passes

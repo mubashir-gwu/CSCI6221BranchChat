@@ -9,6 +9,7 @@ import { Trash2Icon, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
 import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
+import CopyMarkdownButton from "./CopyMarkdownButton";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { TreeNode } from "@/types/tree";
 
@@ -160,16 +161,21 @@ export default function ChatMessage({
           </div>
         )}
 
-        {/* Delete button (visible on hover, user messages only) */}
-        {onDelete && isUser && (
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="absolute -top-2 -right-2 hidden rounded-full bg-card border border-border p-1 text-red-400/70 shadow-sm transition-colors hover:text-red-500 group-hover:block"
-            aria-label="Delete message and replies"
-          >
-            <Trash2Icon className="h-3 w-3" />
-          </button>
-        )}
+        {/* Action buttons (visible on hover) */}
+        <div className="absolute -top-2 -right-2 hidden gap-1 group-hover:flex">
+          <div className="rounded-full bg-card border border-border p-1 shadow-sm">
+            <CopyMarkdownButton content={node.content} />
+          </div>
+          {onDelete && isUser && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="rounded-full bg-card border border-border p-1 text-red-400/70 shadow-sm transition-colors hover:text-red-500"
+              aria-label="Delete message and replies"
+            >
+              <Trash2Icon className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Delete confirmation dialog */}

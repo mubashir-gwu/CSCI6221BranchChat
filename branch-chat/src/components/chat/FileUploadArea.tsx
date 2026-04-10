@@ -79,10 +79,6 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
     }
   }, [validateAndAddFiles]);
 
-  const handleRemove = useCallback((index: number) => {
-    onFilesChange(files.filter((_, i) => i !== index));
-  }, [files, onFilesChange]);
-
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -95,27 +91,6 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
       validateAndAddFiles(e.dataTransfer.files);
     }
   }, [disabled, validateAndAddFiles]);
-
-  const isImage = (file: File) => file.type.startsWith('image/');
-
-  // Memoize blob URLs and revoke previous ones on cleanup
-  const blobUrlMap = useMemo(() => {
-    const map = new Map<File, string>();
-    for (const file of files) {
-      if (file.type.startsWith('image/')) {
-        map.set(file, URL.createObjectURL(file));
-      }
-    }
-    return map;
-  }, [files]);
-
-  useEffect(() => {
-    return () => {
-      for (const url of blobUrlMap.values()) {
-        URL.revokeObjectURL(url);
-      }
-    };
-  }, [blobUrlMap]);
 
   return (
     <div onDragOver={handleDragOver} onDrop={handleDrop}>
@@ -139,38 +114,66 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
       >
         <Paperclip className="h-4 w-4" />
       </Button>
+    </div>
+  );
+}
 
-      {files.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {files.map((file, index) => (
-            <div
-              key={`${file.name}-${index}`}
-              className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
-            >
-              {isImage(file) ? (
-                <img
-                  src={blobUrlMap.get(file) ?? ''}
-                  alt={file.name}
-                  className="h-6 w-6 rounded object-cover"
-                />
-              ) : file.type === 'application/pdf' ? (
-                <FileText className="h-4 w-4 text-red-500" />
-              ) : (
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="max-w-[120px] truncate">{file.name}</span>
-              <button
-                type="button"
-                onClick={() => handleRemove(index)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
-                aria-label={`Remove ${file.name}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+export function FilePreviewChips({
+  files,
+  onRemove,
+}: {
+  files: File[];
+  onRemove: (index: number) => void;
+}) {
+  const blobUrlMap = useMemo(() => {
+    const map = new Map<File, string>();
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        map.set(file, URL.createObjectURL(file));
+      }
+    }
+    return map;
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      for (const url of blobUrlMap.values()) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, [blobUrlMap]);
+
+  if (files.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {files.map((file, index) => (
+        <div
+          key={`${file.name}-${index}`}
+          className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
+        >
+          {file.type.startsWith('image/') ? (
+            <img
+              src={blobUrlMap.get(file) ?? ''}
+              alt={file.name}
+              className="h-6 w-6 rounded object-cover"
+            />
+          ) : file.type === 'application/pdf' ? (
+            <FileText className="h-4 w-4 text-red-500" />
+          ) : (
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="max-w-[120px] truncate">{file.name}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className="ml-0.5 rounded-full p-0.5 hover:bg-muted"
+            aria-label={`Remove ${file.name}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
         </div>
-      )}
+      ))}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { SendIcon, SquareIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
-import FileUploadArea from "./FileUploadArea";
+import FileUploadArea, { FilePreviewChips } from "./FileUploadArea";
 import type { StreamingState } from "@/hooks/useStreamingChat";
 
 interface AttachmentData {
@@ -102,7 +102,7 @@ export default function ChatInput({
 
   return (
     <div className="border-t bg-background p-4">
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-2">
         <FileUploadArea
           files={files}
           onFilesChange={setFiles}
@@ -138,11 +138,10 @@ export default function ChatInput({
           </Button>
         )}
       </div>
-      {files.length > 0 && (
-        <div className="mt-1">
-          {/* File preview chips are rendered inside FileUploadArea */}
-        </div>
-      )}
+      <FilePreviewChips
+        files={files}
+        onRemove={(index) => setFiles(files.filter((_, i) => i !== index))}
+      />
       <div className="mt-2">
         <ModelSelector
           value={selection}

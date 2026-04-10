@@ -1,6 +1,7 @@
-import { Schema, model, models, Document, Types } from 'mongoose';
+import { Schema, model, models, Types } from 'mongoose';
 
-export interface ITokenUsage extends Document {
+export interface ITokenUsage {
+  _id: Types.ObjectId;
   userId: Types.ObjectId;
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock';
   model: string;
@@ -10,7 +11,7 @@ export interface ITokenUsage extends Document {
   updatedAt: Date;
 }
 
-const TokenUsageSchema = new Schema<ITokenUsage>(
+const TokenUsageSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     provider: { type: String, enum: ['openai', 'anthropic', 'gemini', 'mock'], required: true },
@@ -25,4 +26,4 @@ const TokenUsageSchema = new Schema<ITokenUsage>(
 TokenUsageSchema.index({ userId: 1, model: 1 }, { unique: true });
 TokenUsageSchema.index({ userId: 1, provider: 1 });
 
-export const TokenUsage = models.TokenUsage || model<ITokenUsage>('TokenUsage', TokenUsageSchema);
+export const TokenUsage = models.TokenUsage || model('TokenUsage', TokenUsageSchema);

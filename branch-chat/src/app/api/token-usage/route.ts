@@ -31,6 +31,7 @@ export async function GET() {
         inputTokens: u.inputTokens,
         outputTokens: u.outputTokens,
         callCount: u.callCount,
+        webSearchRequests: u.webSearchRequests ?? 0,
       })),
     });
   } catch (err: any) {

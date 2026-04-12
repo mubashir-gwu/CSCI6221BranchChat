@@ -12,6 +12,7 @@ interface UsageEntry {
   inputTokens: number;
   outputTokens: number;
   callCount: number;
+  webSearchRequests: number;
 }
 
 export default function TokenUsageCard() {
@@ -121,6 +122,10 @@ export default function TokenUsageCard() {
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">API calls</span>
                           <span className="font-mono">{entry.callCount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Web searches</span>
+                          <span className="font-mono">{(entry.webSearchRequests ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>

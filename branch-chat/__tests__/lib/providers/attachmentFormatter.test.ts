@@ -84,19 +84,19 @@ describe("formatAttachmentsForProvider", () => {
   });
 
   describe("OpenAI format", () => {
-    it("formats images as image_url with data URI", () => {
+    it("formats images as input_image with flat image_url string", () => {
       const result = formatAttachmentsForProvider([imageAttachment], "openai") as any[];
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe("image_url");
-      expect(result[0].image_url.url).toBe(`data:image/png;base64,${imageAttachment.data}`);
+      expect(result[0].type).toBe("input_image");
+      expect(result[0].image_url).toBe(`data:image/png;base64,${imageAttachment.data}`);
     });
 
-    it("formats PDFs as file with data URI", () => {
+    it("formats PDFs as input_file with flat structure", () => {
       const result = formatAttachmentsForProvider([pdfAttachment], "openai") as any[];
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe("file");
-      expect(result[0].file.filename).toBe("document.pdf");
-      expect(result[0].file.file_data).toBe(`data:application/pdf;base64,${pdfAttachment.data}`);
+      expect(result[0].type).toBe("input_file");
+      expect(result[0].filename).toBe("document.pdf");
+      expect(result[0].file_data).toBe(`data:application/pdf;base64,${pdfAttachment.data}`);
     });
 
     it("formats text files as inline text", () => {

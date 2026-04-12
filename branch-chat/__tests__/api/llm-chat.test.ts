@@ -118,7 +118,7 @@ function makeMockNode(overrides: Record<string, unknown> = {}) {
 async function* successStreamGenerator(): AsyncGenerator<StreamChunk> {
   yield { type: 'token', content: "I'm " };
   yield { type: 'token', content: "doing well!" };
-  yield { type: 'done', content: "I'm doing well!", inputTokens: 10, outputTokens: 20 };
+  yield { type: 'done', content: "I'm doing well!", thinkingContent: null, inputTokens: 10, outputTokens: 20, webSearchRequestCount: 0, citations: [] };
 }
 
 async function* errorBeforeContentGenerator(): AsyncGenerator<StreamChunk> {

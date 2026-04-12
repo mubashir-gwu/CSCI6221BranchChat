@@ -2,17 +2,42 @@ import OpenAI from 'openai';
 import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
-function buildOpenAIMessages(messages: LLMMessage[]): any[] {
-  return messages.map((m) => {
+/**
+ * Returns true for o-series reasoning models (o3, o4-mini, etc.).
+ * These models do not support the temperature parameter.
+ */
+export function isReasoningModel(modelId: string): boolean {
+  return /^o\d/.test(modelId);
+}
+
+function buildInstructionsAndInput(messages: LLMMessage[]): {
+  instructions: string | undefined;
+  input: any[];
+} {
+  const systemMessages: string[] = [];
+  const input: any[] = [];
+
+  for (const m of messages) {
+    if (m.role === 'system') {
+      systemMessages.push(m.content);
+      continue;
+    }
+
     if (m.attachments && m.attachments.length > 0) {
       const contentParts: any[] = [];
       const attachmentBlocks = formatAttachmentsForProvider(m.attachments, 'openai');
       contentParts.push(...attachmentBlocks);
       contentParts.push({ type: 'text', text: m.content });
-      return { role: m.role, content: contentParts };
+      input.push({ role: m.role, content: contentParts });
+    } else {
+      input.push({ role: m.role, content: m.content });
     }
-    return { role: m.role, content: m.content };
-  });
+  }
+
+  return {
+    instructions: systemMessages.length > 0 ? systemMessages.join('\n') : undefined,
+    input,
+  };
 }
 
 export const openaiProvider: LLMProvider = {
@@ -24,19 +49,28 @@ export const openaiProvider: LLMProvider = {
     options?: LLMRequestOptions,
   ): Promise<LLMResponse> {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const { instructions, input } = buildInstructionsAndInput(messages);
 
-    const response = await client.chat.completions.create({
+    const params: Record<string, unknown> = {
       model,
-      messages: buildOpenAIMessages(messages),
-    });
+      input,
+    };
+    if (instructions) {
+      params.instructions = instructions;
+    }
+    if (!isReasoningModel(model)) {
+      params.temperature = 1;
+    }
+
+    const response = await client.responses.create(params as any);
 
     return {
-      content: response.choices[0].message.content ?? '',
+      content: response.output_text ?? '',
       thinkingContent: null,
       provider: 'openai',
       model,
-      inputTokens: response.usage?.prompt_tokens ?? 0,
-      outputTokens: response.usage?.completion_tokens ?? 0,
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
       webSearchRequestCount: 0,
       citations: [],
     };
@@ -49,33 +83,40 @@ export const openaiProvider: LLMProvider = {
   ): AsyncGenerator<StreamChunk> {
     try {
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const { instructions, input } = buildInstructionsAndInput(messages);
 
-      const stream = await client.chat.completions.create({
+      const params: Record<string, unknown> = {
         model,
-        messages: buildOpenAIMessages(messages),
+        input,
         stream: true,
-        stream_options: { include_usage: true },
-      });
+      };
+      if (instructions) {
+        params.instructions = instructions;
+      }
+      if (!isReasoningModel(model)) {
+        params.temperature = 1;
+      }
+
+      const stream = await client.responses.create(params as any);
 
       let accumulated = '';
 
-      for await (const chunk of stream) {
-        if (chunk.choices.length === 0 && chunk.usage) {
+      for await (const event of stream as any) {
+        if (event.type === 'response.output_text.delta') {
+          const delta = event.delta as string;
+          accumulated += delta;
+          yield { type: 'token', content: delta };
+        } else if (event.type === 'response.completed') {
+          const usage = event.response?.usage;
           yield {
             type: 'done',
             content: accumulated,
             thinkingContent: null,
-            inputTokens: chunk.usage.prompt_tokens ?? 0,
-            outputTokens: chunk.usage.completion_tokens ?? 0,
+            inputTokens: usage?.input_tokens ?? 0,
+            outputTokens: usage?.output_tokens ?? 0,
             webSearchRequestCount: 0,
             citations: [],
           };
-        } else {
-          const content = chunk.choices[0]?.delta?.content;
-          if (content) {
-            accumulated += content;
-            yield { type: 'token', content };
-          }
         }
       }
     } catch (error: any) {

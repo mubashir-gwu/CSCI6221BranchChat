@@ -8,6 +8,7 @@ export interface ITokenUsage {
   inputTokens: number;
   outputTokens: number;
   callCount: number;
+  webSearchRequests: number;
   updatedAt: Date;
 }
 
@@ -19,6 +20,7 @@ const TokenUsageSchema = new Schema(
     inputTokens: { type: Number, default: 0 },
     outputTokens: { type: Number, default: 0 },
     callCount: { type: Number, default: 0 },
+    webSearchRequests: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: false, updatedAt: true } }
 );

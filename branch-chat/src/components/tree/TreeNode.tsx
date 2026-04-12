@@ -27,7 +27,7 @@ function TreeNodeComponent({ data }: { data: TreeNodeData }) {
       className={`
         relative rounded-lg border px-3 py-2 text-xs shadow-sm
         min-w-40 max-w-45
-        ${isUser ? 'cursor-default' : 'cursor-pointer hover:border-primary/50'}
+        cursor-pointer hover:border-primary/50
         ${data.isActive
           ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
           : 'border-border bg-card'

@@ -23,6 +23,7 @@ interface ChatPanelProps {
   streamingState?: StreamingState;
   scrollToNodeId?: string | null;
   onScrollComplete?: () => void;
+  onVisibleNodeChange?: (nodeId: string) => void;
 }
 
 export default function ChatPanel({
@@ -40,6 +41,7 @@ export default function ChatPanel({
   streamingState,
   scrollToNodeId,
   onScrollComplete,
+  onVisibleNodeChange,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -82,6 +84,45 @@ export default function ChatPanel({
     }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activePath.length, isLoading, streamingContent]);
+
+  // Track which message is at the top of the viewport and report to parent
+  useEffect(() => {
+    if (!onVisibleNodeChange) return;
+    // Find viewport relative to a known child element, not via global query
+    const viewport = bottomRef.current?.closest('[data-slot="scroll-area-viewport"]');
+    if (!viewport) return;
+
+    let rafId: number | null = null;
+
+    const handleScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const viewportTop = viewport.getBoundingClientRect().top;
+        let closestId: string | null = null;
+        let closestDist = Infinity;
+
+        for (const [nodeId, el] of messageRefs.current) {
+          const rect = el.getBoundingClientRect();
+          const dist = Math.abs(rect.top - viewportTop);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestId = nodeId;
+          }
+        }
+
+        if (closestId) {
+          onVisibleNodeChange(closestId);
+        }
+      });
+    };
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [onVisibleNodeChange, activePath]);
 
   if (activePath.length === 0 && !isLoading && !isStreaming) {
     return (

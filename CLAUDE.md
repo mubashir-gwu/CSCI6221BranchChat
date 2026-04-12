@@ -449,7 +449,7 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 
 | Component             | Props                                                      | Behavior                                                        |
 | --------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
-| **ChatPanel**         | `activePath[]`, `onBranchNavigate`                         | Maps → ChatMessage. Auto-scroll. LoadingIndicator.              |
+| **ChatPanel**         | `activePath[]`, `onBranchNavigate`, `scrollToNodeId?`, `onScrollComplete?`, `onVisibleNodeChange?` | Maps → ChatMessage. Auto-scroll to bottom on new messages. Scroll-to-node on tree click (with 16px offset). Reports topmost visible node via scroll listener for tree highlight sync. LoadingIndicator. |
 | **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. |
 | **CopyMarkdownButton**| `{ content: string }`                                      | ClipboardCopy icon button. Copies raw markdown to clipboard. Swaps to Check icon for 2s. No toast. |
 | **ChatInput**         | `onSend`, `disabled`, `defaultProvider`, `defaultModel`    | Textarea + send + ModelSelector. Clears on send. Sticky bottom on mobile. Toggles (ThinkingToggle, WebSearchToggle) show icon-only on mobile, icon+label on desktop. `flex-wrap` on toggles row. |
@@ -458,11 +458,23 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **BranchMenu**        | `parentNodeId`, `children[]`, `activeChildId`, `onSelect`  | Sibling list with preview + color. "New branch from here" option at bottom. |
 | **TreeSidebar**       | `isOpen`, `onToggle`                                       | Toggle visible. TreeVisualization when open. |
 | **TreeVisualization** | `nodes`, `childrenMap`, `activeNodeId`, `onNodeClick`      | `<ReactFlow>` from `@xyflow/react`. Conditionally renders `<MiniMap>` based on `isMinimapVisible`. Minimap toggle as `<ControlButton>` in ReactFlow Controls toolbar (Map/MapMinus icon, outline style). Styles in globals.css. |
-| **TreeNode**          | `{ label, role, provider, isActive, hasMultipleChildren }` | Colored box. Provider dot. Active ring. No connection handles. Only assistant nodes are clickable. |
+| **TreeNode**          | `{ label, role, provider, isActive, hasMultipleChildren }` | Colored box. Provider dot. Active ring. No connection handles. All nodes are clickable. |
 | **ThemeToggle**       | none                                                       | Cycle button: light → dark → system (Sun/Moon/Monitor icons). Uses `useTheme()` from `next-themes`. |
 | **ThinkingToggle**    | `{ enabled, onToggle, disabled, modelName? }`              | Brain icon toggle. `opacity-50 pointer-events-none` when disabled. Tooltip "Not available for {modelName}". Icon-only on mobile, icon+label on desktop. |
 | **ThinkingBlock**     | `{ content, isStreaming? }`                                | Collapsible thinking display above assistant response. Default collapsed. Pulsing header when streaming. Plain text, muted styling, `border-l-2 border-muted pl-3`. |
 | **TokenUsageCard**    | none (fetches from `/api/token-usage` internally)          | Table/card showing per-provider token usage (input, output, total calls). |
+
+### Tree-Chat Sync Behavior
+
+Clicking a node in the tree visualization:
+1. Sets `activeNodeId` to the clicked node (tree highlight).
+2. Walks forward from the clicked node following first children until a branch point (>1 children) or leaf. Sets `pathEndNodeId` to that endpoint so the chat panel displays messages up to the next branch point, not just to the clicked node.
+3. Scrolls the chat panel to the clicked message (with 16px top offset).
+4. New messages are always sent from the end of the displayed path (`pathEndNodeId ?? activeNodeId`), not the highlighted node.
+5. The chat panel scroll position drives the tree highlight: as the user scrolls, the topmost visible message is highlighted in the tree view.
+6. The default provider/model for new messages is derived from the last assistant message in the displayed path, not the clicked node.
+
+`pathEndNodeId`, `treeHighlightNodeId`, and `scrollToNodeId` are local state in the chat page, not stored in any React Context.
 
 ### Intentional Deviation: Mobile Layout (F-30)
 

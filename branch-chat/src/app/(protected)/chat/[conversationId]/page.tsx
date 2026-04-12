@@ -68,6 +68,18 @@ export default function ChatPage() {
           const hashNodeId = window.location.hash.replace("#", "");
           if (hashNodeId && nodesMap.has(hashNodeId)) {
             dispatch({ type: "SET_ACTIVE_NODE", payload: hashNodeId });
+            // Walk forward to next branch point or leaf for path display
+            const cm = buildChildrenMap(nodesMap);
+            let endId = hashNodeId;
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const children = cm.get(endId) ?? [];
+              if (children.length !== 1) break;
+              endId = children[0];
+            }
+            if (endId !== hashNodeId) {
+              setPathEndNodeId(endId);
+            }
           } else {
             const childrenMap = buildChildrenMap(nodesMap);
             let leafId: string | null = null;
@@ -108,33 +120,41 @@ export default function ChatPage() {
     [state.nodes]
   );
 
-  const activePath = useActivePath(state.activeNodeId, state.nodes);
+  const [pathEndNodeId, setPathEndNodeId] = useState<string | null>(null);
+  const activePath = useActivePath(pathEndNodeId ?? state.activeNodeId, state.nodes);
 
-  // Determine default provider/model from active node or conversation defaults
-  const activeNode = state.activeNodeId
-    ? state.nodes.get(state.activeNodeId)
-    : null;
+  // Determine default provider/model from the last assistant message in the path
+  const lastProviderNode = (() => {
+    for (let i = activePath.length - 1; i >= 0; i--) {
+      if (activePath[i].provider) return activePath[i];
+    }
+    return null;
+  })();
   const conversation = state.conversations.find((c) => c.id === conversationId);
 
   const conversationProviderAvailable =
     conversation?.defaultProvider && availableProviders.includes(conversation.defaultProvider);
   const defaultProvider =
-    activeNode?.provider ??
+    lastProviderNode?.provider ??
     (conversationProviderAvailable ? conversation.defaultProvider : null) ??
     uiState.selectedProvider;
   const defaultModel =
-    activeNode?.model ??
+    lastProviderNode?.model ??
     (conversationProviderAvailable ? conversation.defaultModel : null) ??
     uiState.selectedModel;
 
   const handleSend = useCallback(
     async (content: string, provider: string, model: string, attachments?: { filename: string; mimeType: string; data: string; size: number }[]) => {
+      // New messages attach at the end of the displayed path, not the highlighted node
+      const sendParentId = pathEndNodeId ?? state.activeNodeId;
       setRestoredMessage('');
       setPreviousActiveNodeId(null);
+      setPathEndNodeId(null);
+      setTreeHighlightNodeId(null);
       const tempId = `temp-${Date.now()}`;
       const optimisticNode: TreeNode = {
         id: tempId,
-        parentId: state.activeNodeId,
+        parentId: sendParentId,
         role: "user",
         content,
         provider: null,
@@ -150,7 +170,7 @@ export default function ChatPage() {
 
       const result = await sendStreamingMessage({
         conversationId,
-        parentNodeId: state.activeNodeId,
+        parentNodeId: sendParentId,
         content,
         provider,
         model,
@@ -164,7 +184,7 @@ export default function ChatPage() {
 
       if (result.type !== 'done') {
         // Error or abort — restore the prompt so user can edit and resend
-        dispatch({ type: "SET_ACTIVE_NODE", payload: state.activeNodeId });
+        dispatch({ type: "SET_ACTIVE_NODE", payload: sendParentId });
         setRestoredMessage(content);
 
         if (result.type === 'error') {
@@ -211,7 +231,7 @@ export default function ChatPage() {
         });
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled, uiState.webSearchEnabled]
+    [conversationId, state.activeNodeId, pathEndNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled, uiState.webSearchEnabled]
   );
 
   const handleBranchNavigate = useCallback(
@@ -219,19 +239,37 @@ export default function ChatPage() {
       const leafId = findDeepestLeaf(nodeId, childrenMap);
       dispatch({ type: "SET_ACTIVE_NODE", payload: leafId });
       window.location.hash = leafId;
+      setPathEndNodeId(null);
+      setTreeHighlightNodeId(null);
     },
     [childrenMap, dispatch]
   );
 
   const [scrollToNodeId, setScrollToNodeId] = useState<string | null>(null);
+  const [treeHighlightNodeId, setTreeHighlightNodeId] = useState<string | null>(null);
+
+  const handleVisibleNodeChange = useCallback((nodeId: string) => {
+    setTreeHighlightNodeId(nodeId);
+  }, []);
 
   const handleTreeNodeClick = useCallback(
     (nodeId: string) => {
+      // Walk forward from the clicked node following first children
+      // until we hit a branch point (>1 children) or a leaf
+      let endId = nodeId;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const children = childrenMap.get(endId) ?? [];
+        if (children.length !== 1) break;
+        endId = children[0];
+      }
       dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
       window.location.hash = nodeId;
+      setPathEndNodeId(endId !== nodeId ? endId : null);
       setScrollToNodeId(nodeId);
+      setTreeHighlightNodeId(nodeId);
     },
-    [dispatch]
+    [dispatch, childrenMap]
   );
 
   const handleScrollComplete = useCallback(() => {
@@ -245,6 +283,8 @@ export default function ChatPage() {
       setPreviousActiveNodeId(state.activeNodeId);
       dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
       window.location.hash = nodeId;
+      setPathEndNodeId(null);
+      setTreeHighlightNodeId(null);
     },
     [state.activeNodeId, dispatch]
   );
@@ -254,6 +294,8 @@ export default function ChatPage() {
       dispatch({ type: "SET_ACTIVE_NODE", payload: previousActiveNodeId });
       window.location.hash = previousActiveNodeId;
       setPreviousActiveNodeId(null);
+      setPathEndNodeId(null);
+      setTreeHighlightNodeId(null);
     }
   }, [previousActiveNodeId, dispatch]);
 
@@ -302,6 +344,9 @@ export default function ChatPage() {
         const descendants = findDescendants(nodeId, childrenMap);
         deletedIds.push(...descendants);
         dispatch({ type: "REMOVE_NODES", payload: deletedIds });
+
+        setPathEndNodeId(null);
+        setTreeHighlightNodeId(null);
 
         // Navigate to parent or clear if root was deleted
         if (data.newActiveNodeId) {
@@ -365,6 +410,7 @@ export default function ChatPage() {
       streamingState={streamingState}
       scrollToNodeId={scrollToNodeId}
       onScrollComplete={handleScrollComplete}
+      onVisibleNodeChange={handleVisibleNodeChange}
     />
   );
 
@@ -389,7 +435,7 @@ export default function ChatPage() {
         onToggle={handleToggleTree}
         nodes={state.nodes}
         childrenMap={childrenMap}
-        activeNodeId={state.activeNodeId}
+        activeNodeId={treeHighlightNodeId ?? state.activeNodeId}
         onNodeClick={handleTreeNodeClick}
       />
     </div>

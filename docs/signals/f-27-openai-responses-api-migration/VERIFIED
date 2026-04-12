@@ -1,0 +1,4 @@
+Audit passed. No critical or medium issues found.
+
+Low-severity note:
+- The error chunk test in openai.test.ts (line 273-295) doesn't exercise the actual error path. The source code error handling is correct; the test just doesn't verify it. Not a runtime concern.

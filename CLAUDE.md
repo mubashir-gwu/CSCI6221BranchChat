@@ -367,7 +367,7 @@ type StreamChunk =
 
 Each provider reads its API key from the corresponding environment variable internally. No `apiKey` parameter.
 
-- **OpenAI** (v6): `client.chat.completions.create({ model, messages })`. System inline. Reads `OPENAI_API_KEY`. Token counts from `response.usage.prompt_tokens`/`response.usage.completion_tokens`.
+- **OpenAI** (v6): `client.responses.create({ model, input, instructions })`. System messages extracted into `instructions` (string); non-system messages passed as `input`. `isReasoningModel()` helper omits `temperature` for o-series models (e.g., `o3`, `o4-mini`). Reads `OPENAI_API_KEY`. Token counts from `response.usage.input_tokens`/`response.usage.output_tokens`. Streaming: `response.output_text.delta` for text deltas, `response.completed` for final usage.
 - **Anthropic** (v0.80): System → `system` param. `max_tokens: 4096`. Reads `ANTHROPIC_API_KEY`. Token counts from `response.usage.input_tokens`/`response.usage.output_tokens`.
 - **Gemini** (`@google/genai`): `new GoogleGenAI({ apiKey })` → `ai.chats.create({ model, history })` → `chat.sendMessage({ message })`. Map `assistant`→`model`. System messages via `config.systemInstruction`. Reads `GEMINI_API_KEY`. Token counts from `response.usageMetadata.promptTokenCount`/`response.usageMetadata.candidatesTokenCount`.
 - **Mock**: Sleep 1s, canned Markdown. `NODE_ENV === 'development'` only. Estimates tokens: `ceil(content.length / 4)` for both input and output.

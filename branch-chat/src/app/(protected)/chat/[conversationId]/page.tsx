@@ -299,13 +299,22 @@ export default function ChatPage() {
 
   const handleGoBack = useCallback(() => {
     if (previousActiveNodeId) {
+      // Walk forward to next branch point or leaf
+      let endId = previousActiveNodeId;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const children = childrenMap.get(endId) ?? [];
+        if (children.length !== 1) break;
+        endId = children[0];
+      }
       dispatch({ type: "SET_ACTIVE_NODE", payload: previousActiveNodeId });
       window.location.hash = previousActiveNodeId;
       setPreviousActiveNodeId(null);
-      setPathEndNodeId(null);
-      setTreeHighlightNodeId(null);
+      setPathEndNodeId(endId !== previousActiveNodeId ? endId : null);
+      setScrollToNodeId(previousActiveNodeId);
+      setTreeHighlightNodeId(previousActiveNodeId);
     }
-  }, [previousActiveNodeId, dispatch]);
+  }, [previousActiveNodeId, childrenMap, dispatch]);
 
   const handleToggleTree = useCallback(() => {
     uiDispatch({ type: "TOGGLE_TREE" });

@@ -1444,3 +1444,36 @@ None.
 
 ### Summary
 All 12 tasks (T-139 through T-150) completed. Build passes, all 241 tests pass (including 17 new tests). Web search implemented across all 4 providers with provider-specific tool types, citation formats, and usage tracking.
+
+---
+
+## F-30: Responsive Layout
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-151: Add Scroll-Snap CSS and PanelIndicator Component
+- Added scroll-snap CSS classes to globals.css (`.panel-container`, `.panel-item`)
+- Uses `100dvh` for dynamic viewport height on mobile
+- Hidden scrollbar on panel container via vendor prefixes
+- Created `PanelIndicator` component with dot indicators (active = `bg-primary`, inactive = `bg-muted`)
+- PanelIndicator hidden on desktop via `md:hidden`
+
+### T-152: Implement Mobile Swipeable Layout in Chat Page
+- Added mobile three-panel scroll-snap layout (`md:hidden`) with ConversationList, ChatPanel, and TreeVisualization
+- Desktop layout unchanged (`hidden md:flex`)
+- Initial scroll position centers on chat panel (index 1) via `requestAnimationFrame` + `scrollTo`
+- IntersectionObserver with `threshold: 0.5` tracks active panel for PanelIndicator
+- Shared chatPanelElement and chatInputElement between mobile/desktop to avoid duplication
+
+### T-153: Modify Protected Layout for Mobile Sidebar Extraction
+- Changed sidebar `<aside>` from `flex` to `hidden md:flex` so it only renders on desktop
+- ConversationList rendered in two places: layout (desktop) and chat page (mobile), Tailwind responsive classes ensure only one is visible
+
+### T-154: Adjust ChatInput for Compact Mobile Toggle Layout
+- Added `sticky bottom-0` to ChatInput container for mobile positioning
+- Added `flex-wrap` to toggles row to prevent overflow on small screens
+- ThinkingToggle and WebSearchToggle already had icon-only mobile mode (`hidden md:inline` on label text)
+
+### Summary
+All 4 tasks (T-151 through T-154) completed. Build passes. CSS scroll-snap swipeable three-panel mobile layout implemented with PanelIndicator dots, sidebar extracted to chat page on mobile, and ChatInput optimized for compact screens.

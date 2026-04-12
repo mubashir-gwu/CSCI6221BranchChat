@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { useConversation } from "@/hooks/useConversation";
@@ -12,9 +12,6 @@ import { Button } from "@/components/ui/button";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import TreeSidebar from "@/components/tree/TreeSidebar";
-import ConversationList from "@/components/sidebar/ConversationList";
-import TreeVisualization from "@/components/tree/TreeVisualization";
-import PanelIndicator from "@/components/common/PanelIndicator";
 import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
@@ -325,42 +322,6 @@ export default function ChatPage() {
   );
   const thinkingDisabled = !selectedModelConfig?.supportsThinking;
 
-  // Mobile panel state
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [activePanel, setActivePanel] = useState(1);
-
-  // Scroll to center panel (chat) on mount
-  useEffect(() => {
-    if (containerRef.current) {
-      requestAnimationFrame(() => {
-        containerRef.current?.scrollTo({ left: window.innerWidth, behavior: 'instant' as ScrollBehavior });
-      });
-    }
-  }, []);
-
-  // IntersectionObserver for active panel detection
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const panels = container.children;
-    if (!panels.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            setActivePanel(Number((entry.target as HTMLElement).dataset.panelIndex));
-          }
-        });
-      },
-      { threshold: 0.5, root: container }
-    );
-    Array.from(panels).forEach((panel, i) => {
-      (panel as HTMLElement).dataset.panelIndex = String(i);
-      observer.observe(panel);
-    });
-    return () => observer.disconnect();
-  }, []);
-
   const chatInputElement = (
     <ChatInput
       onSend={handleSend}
@@ -399,80 +360,29 @@ export default function ChatPage() {
   );
 
   return (
-    <>
-      {/* Mobile layout */}
-      <div className="md:hidden flex flex-col h-full">
-        <div ref={containerRef} className="panel-container flex-1">
-          <div className="panel-item" data-panel-index="0">
-            <div className="flex h-full flex-col bg-muted/30">
-              <div className="flex h-11 items-center border-b px-3">
-                <span className="text-lg font-semibold">BranchChat</span>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <ConversationList />
-              </div>
-            </div>
-          </div>
-          <div className="panel-item" data-panel-index="1">
-            <div className="flex h-full flex-col">
-              <div className="flex h-11 items-center justify-between border-b px-4">
-                <h2 className="text-sm font-semibold truncate">
-                  {conversation?.title ?? "Chat"}
-                </h2>
-                <Button size="sm" variant="outline" onClick={handleExport}>
-                  Export
-                </Button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                {chatPanelElement}
-              </div>
-              {chatInputElement}
-            </div>
-          </div>
-          <div className="panel-item" data-panel-index="2">
-            <div className="h-full bg-card">
-              <div className="flex h-10 items-center border-b px-3">
-                <span className="text-sm font-medium">Tree View</span>
-              </div>
-              <div className="h-[calc(100%-2.5rem)]">
-                <TreeVisualization
-                  nodes={state.nodes}
-                  childrenMap={childrenMap}
-                  activeNodeId={state.activeNodeId}
-                  onNodeClick={handleTreeNodeClick}
-                />
-              </div>
-            </div>
-          </div>
+    <div className="flex h-full">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex h-11 items-center justify-between border-b px-4">
+          <h2 className="text-sm font-semibold truncate">
+            {conversation?.title ?? "Chat"}
+          </h2>
+          <Button size="sm" variant="outline" onClick={handleExport}>
+            Export
+          </Button>
         </div>
-        <PanelIndicator activeIndex={activePanel} count={3} />
-      </div>
-
-      {/* Desktop layout */}
-      <div className="hidden md:flex h-full">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex h-11 items-center justify-between border-b px-4">
-            <h2 className="text-sm font-semibold truncate">
-              {conversation?.title ?? "Chat"}
-            </h2>
-            <Button size="sm" variant="outline" onClick={handleExport}>
-              Export
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {chatPanelElement}
-          </div>
-          {chatInputElement}
+        <div className="flex-1 overflow-hidden">
+          {chatPanelElement}
         </div>
-        <TreeSidebar
-          isOpen={uiState.isTreeOpen}
-          onToggle={handleToggleTree}
-          nodes={state.nodes}
-          childrenMap={childrenMap}
-          activeNodeId={state.activeNodeId}
-          onNodeClick={handleTreeNodeClick}
-        />
+        {chatInputElement}
       </div>
-    </>
+      <TreeSidebar
+        isOpen={uiState.isTreeOpen}
+        onToggle={handleToggleTree}
+        nodes={state.nodes}
+        childrenMap={childrenMap}
+        activeNodeId={state.activeNodeId}
+        onNodeClick={handleTreeNodeClick}
+      />
+    </div>
   );
 }

@@ -15,12 +15,21 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar — hidden on mobile, shown on desktop (mobile uses swipeable panels in chat page) */}
+      {/* Sidebar — fixed full-screen overlay on mobile, inline on desktop */}
       {uiState.isSidebarOpen && (
-        <aside className="hidden md:flex w-64 flex-col border-r bg-muted/30">
+        <aside className="fixed inset-0 z-40 flex flex-col bg-background md:bg-muted/30 md:static md:z-auto md:w-64 md:border-r">
           <div className="flex h-11 items-center justify-between border-b px-3">
             <Link href="/dashboard" className="text-lg font-semibold hover:opacity-80">BranchChat</Link>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={() => uiDispatch({ type: "TOGGLE_SIDEBAR" })}
+                className="md:hidden flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                aria-label="Close sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-hidden">
             <ConversationList />

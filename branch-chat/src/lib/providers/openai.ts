@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk, Citation } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 /**
@@ -40,6 +40,30 @@ function buildInstructionsAndInput(messages: LLMMessage[]): {
   };
 }
 
+function extractCitationsFromOutput(output: any[]): Citation[] {
+  const seen = new Set<string>();
+  const citations: Citation[] = [];
+  for (const item of output) {
+    if (item.type === 'message' && Array.isArray(item.content)) {
+      for (const block of item.content) {
+        if (Array.isArray(block.annotations)) {
+          for (const ann of block.annotations) {
+            if (ann.type === 'url_citation' && ann.url && ann.title && !seen.has(ann.url)) {
+              seen.add(ann.url);
+              citations.push({ url: ann.url, title: ann.title });
+            }
+          }
+        }
+      }
+    }
+  }
+  return citations;
+}
+
+function countWebSearchCalls(output: any[]): number {
+  return output.filter((item: any) => item.type === 'web_search_call').length;
+}
+
 export const openaiProvider: LLMProvider = {
   name: 'openai',
 
@@ -64,6 +88,9 @@ export const openaiProvider: LLMProvider = {
     if (options?.thinkingEnabled && isReasoningModel(model)) {
       params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
     }
+    if (options?.webSearchEnabled) {
+      params.tools = [...(params.tools as any[] || []), { type: 'web_search_preview' }];
+    }
 
     const response = await client.responses.create(params as any);
 
@@ -79,6 +106,10 @@ export const openaiProvider: LLMProvider = {
       }
     }
 
+    const outputArr = response.output ?? [];
+    const citations = extractCitationsFromOutput(outputArr);
+    const webSearchRequestCount = countWebSearchCalls(outputArr);
+
     return {
       content: response.output_text ?? '',
       thinkingContent,
@@ -86,8 +117,8 @@ export const openaiProvider: LLMProvider = {
       model,
       inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
-      webSearchRequestCount: 0,
-      citations: [],
+      webSearchRequestCount,
+      citations,
     };
   },
 
@@ -114,6 +145,9 @@ export const openaiProvider: LLMProvider = {
       if (options?.thinkingEnabled && isReasoningModel(model)) {
         params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
       }
+      if (options?.webSearchEnabled) {
+        params.tools = [...(params.tools as any[] || []), { type: 'web_search_preview' }];
+      }
 
       const stream = await client.responses.create(params as any);
 
@@ -131,14 +165,17 @@ export const openaiProvider: LLMProvider = {
           yield { type: 'thinking', content: delta };
         } else if (event.type === 'response.completed') {
           const usage = event.response?.usage;
+          const outputArr = event.response?.output ?? [];
+          const citations = extractCitationsFromOutput(outputArr);
+          const webSearchRequestCount = countWebSearchCalls(outputArr);
           yield {
             type: 'done',
             content: accumulated,
             thinkingContent: accumulatedThinking || null,
             inputTokens: usage?.input_tokens ?? 0,
             outputTokens: usage?.output_tokens ?? 0,
-            webSearchRequestCount: 0,
-            citations: [],
+            webSearchRequestCount,
+            citations,
           };
         }
       }

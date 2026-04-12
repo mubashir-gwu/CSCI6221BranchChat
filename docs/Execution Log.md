@@ -1289,3 +1289,69 @@ Updated the Gemini model entry in:
 - Updated attachment formatter tests: `input_image` with flat string, `input_file` with flat structure
 - Updated llm-chat test `successStreamGenerator` to include full `done` chunk fields
 - All 207 tests pass, build passes
+
+## F-28: Extended Thinking
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-129: Add thinkingContent to Node Schema
+- Added `thinkingContent: { type: String, default: null }` to NodeSchema
+- Added `thinkingContent?: string | null` to INode interface
+- Backward-compatible: existing nodes have `undefined` which is functionally null
+
+### T-130: Implement Extended Thinking in Anthropic Provider
+- Added `buildThinkingParams()` helper that handles both "high" (budget_tokens: 10000) and "max" (adaptive) thinking levels
+- Temperature locked to 1, max_tokens bumped to 16384 when thinking enabled
+- `sendMessage`: parses thinking blocks from response content array
+- `streamMessage`: yields `thinking` chunks from `thinking_delta` events, accumulates for done chunk
+- Imported MODELS config for model-specific thinking level lookup
+
+### T-131: Implement Extended Thinking in OpenAI Provider
+- Added `reasoning: { effort, summary: "auto" }` param for o-series models when thinking enabled
+- `sendMessage`: extracts reasoning summaries from response output items
+- `streamMessage`: handles `response.reasoning_summary_text.delta` events as thinking chunks
+- Non-reasoning models (gpt-4o, etc.) ignore thinkingEnabled silently
+
+### T-132: Implement Extended Thinking in Gemini Provider
+- Added `thinkingConfig: { thinkingLevel, includeThoughts: true }` to config when enabled
+- `systemInstruction` preserved alongside `thinkingConfig` in config object
+- `sendMessage`: extracts thought-flagged parts (`part.thought === true`) from response candidates
+- `streamMessage`: yields thinking chunks for thought-flagged parts, regular tokens for normal parts
+
+### T-133: Implement Extended Thinking in Mock Provider
+- Added canned thinking content constant
+- `sendMessage`: returns thinking content when enabled
+- `streamMessage`: yields 3 thinking chunks before text tokens when enabled
+
+### T-134: Add Thinking State to UIContext and UIProvider
+- Added `thinkingEnabled: boolean` (default: false) to UIState
+- Added `TOGGLE_THINKING` and `SET_THINKING_ENABLED` actions
+- Auto-disables thinking via useEffect when switching to model without `supportsThinking`
+
+### T-135: Create ThinkingToggle and ThinkingBlock Components
+- ThinkingToggle: Brain icon button, opacity-50 when disabled, bg-primary/10 when active, icon-only on mobile
+- ThinkingBlock: collapsible section (default collapsed), pulsing animation when streaming, plain text with muted styling
+
+### T-136: Update useStreamingChat Hook for Thinking SSE Events
+- Added `streamingThinkingContent` state with same buffered flush pattern as streamingContent
+- Handles `event: thinking` SSE events, accumulates content
+- `thinkingEnabled` and `webSearchEnabled` included in fetch request body
+- Exposed `streamingThinkingContent` in hook return value
+
+### T-137: Update ChatInput, ChatMessage, ChatPanel for Thinking UI
+- ChatInput: renders ThinkingToggle in row alongside ModelSelector
+- ChatMessage: renders ThinkingBlock above message content for completed messages with thinkingContent; renders streaming ThinkingBlock during active streaming
+- ChatPanel: passes streamingThinkingContent to streaming message area with ThinkingBlock
+- Chat page: wires up thinkingEnabled from UIContext, passes toggle/disabled props, sends thinkingEnabled in streaming request
+- Added thinkingContent to TreeNode type and NodeResponse type
+
+### T-138: Update Chat API Route and Export/Import for thinkingContent
+- Chat route: extracts thinkingEnabled, builds LLMRequestOptions with model config, passes to streamMessage
+- Handles `thinking` StreamChunk: emits `event: thinking` SSE events
+- Saves thinkingContent on assistant node, includes in done SSE event
+- Auto-title passes `{ thinkingEnabled: false, webSearchEnabled: false }` to avoid waste
+- Export: includes thinkingContent in serialized nodes
+- Import: restores thinkingContent from imported JSON
+- Nodes GET route: includes thinkingContent in serialized response
+- Build passes, no errors

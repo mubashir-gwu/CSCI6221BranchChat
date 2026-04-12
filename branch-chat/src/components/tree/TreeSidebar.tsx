@@ -34,7 +34,7 @@ export default function TreeSidebar({
 
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-card md:static md:z-auto md:h-full md:w-80 md:border-l">
-          <div className="flex h-10 items-center justify-between border-b px-3">
+          <div className="flex h-11 items-center justify-between border-b px-3">
             <span className="text-sm font-medium">Tree View</span>
             <button
               onClick={onToggle}
@@ -44,7 +44,7 @@ export default function TreeSidebar({
               <PanelRightClose className="h-4 w-4" />
             </button>
           </div>
-          <div className="h-[calc(100%-2.5rem)]">
+          <div className="h-[calc(100%-2.75rem)]">
             <TreeVisualization
               nodes={nodes}
               childrenMap={childrenMap}

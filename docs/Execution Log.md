@@ -1251,3 +1251,41 @@ Updated the Gemini model entry in:
 - Updated all `streamMessage` `done` chunks with the same defaults
 - No behavioral changes — all providers work exactly as before
 - Build passes, all 190 tests pass
+
+---
+
+## F-27: OpenAI Responses API Migration
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-126: Rewrite OpenAI Provider for Responses API
+- Replaced `client.chat.completions.create()` with `client.responses.create()`
+- System messages extracted into `instructions` parameter (concatenated with newlines)
+- Non-system messages passed as `input` array (replaces `messages`)
+- Response text read from `response.output_text` (replaces `response.choices[0].message.content`)
+- Token usage read from `response.usage.input_tokens`/`output_tokens` (replaces `prompt_tokens`/`completion_tokens`)
+- Added exported `isReasoningModel()` helper: returns true for o-series models (`/^o\d/`)
+- Temperature omitted for o-series models, set to 1 for others
+- Streaming uses `response.output_text.delta` events (replaces `choices[0].delta.content`)
+- Streaming completion uses `response.completed` event (replaces usage-only chunk)
+- Build passes
+
+### T-127: Update Attachment Formatter for OpenAI Responses API
+- Image attachments: `type: "input_image"` with flat `image_url` string (was `type: "image_url"` with nested object)
+- File/PDF attachments: `type: "input_file"` with flat `file_data` and `filename` (was `type: "file"` with nested object)
+- Text file format unchanged
+- Anthropic and Gemini formats unchanged
+- Build passes
+
+### T-128: Update OpenAI Provider and Attachment Formatter Tests
+- Created new `__tests__/lib/providers/openai.test.ts` with 14 tests covering:
+  - `isReasoningModel()` helper (true for o3/o4-mini, false for gpt-4o/gpt-4o-mini)
+  - `sendMessage` uses `client.responses.create()` with `instructions` and `input` fields
+  - Response parsing from `output_text`, token usage from `input_tokens`/`output_tokens`
+  - Temperature omitted for o-series, included for non-reasoning models
+  - Multiple system messages concatenated into single `instructions` string
+  - Streaming with `response.output_text.delta` and `response.completed` events
+- Updated attachment formatter tests: `input_image` with flat string, `input_file` with flat structure
+- Updated llm-chat test `successStreamGenerator` to include full `done` chunk fields
+- All 207 tests pass, build passes

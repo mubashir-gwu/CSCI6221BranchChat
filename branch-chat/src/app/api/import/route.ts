@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       provider: node.provider,
       model: node.model,
       ...(node.thinkingContent ? { thinkingContent: node.thinkingContent } : {}),
+      ...(node.citations?.length ? { citations: node.citations.filter((c: any) => c?.url && c?.title) } : {}),
       ...(node.attachments?.length ? { attachments: node.attachments } : {}),
       createdAt: node.createdAt ? new Date(node.createdAt) : new Date(),
     }));

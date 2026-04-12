@@ -64,6 +64,7 @@ export async function GET(
         provider: n.provider ?? null,
         model: n.model ?? null,
         ...(n.thinkingContent ? { thinkingContent: n.thinkingContent } : {}),
+        ...(n.citations?.length ? { citations: n.citations } : {}),
         ...(n.attachments?.length ? { attachments: n.attachments } : {}),
         createdAt: n.createdAt.toISOString(),
       })),

@@ -10,6 +10,7 @@ export interface UIState {
   selectedProvider: string;
   selectedModel: string;
   availableProviders: string[];
+  thinkingEnabled: boolean;
 }
 
 export type UIAction =
@@ -18,7 +19,9 @@ export type UIAction =
   | { type: "TOGGLE_TREE" }
   | { type: "SET_SELECTED_MODEL"; payload: { provider: string; model: string } }
   | { type: "SET_AVAILABLE_PROVIDERS"; payload: string[] }
-  | { type: "TOGGLE_MINIMAP" };
+  | { type: "TOGGLE_MINIMAP" }
+  | { type: "TOGGLE_THINKING" }
+  | { type: "SET_THINKING_ENABLED"; payload: boolean };
 
 export interface UIContextValue {
   state: UIState;

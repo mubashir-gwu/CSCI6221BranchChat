@@ -12,6 +12,7 @@ const initialState: UIState = {
   selectedProvider: "openai",
   selectedModel: "gpt-4o",
   availableProviders: [],
+  thinkingEnabled: false,
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -37,6 +38,12 @@ function uiReducer(state: UIState, action: UIAction): UIState {
 
     case "TOGGLE_MINIMAP":
       return { ...state, isMinimapVisible: !state.isMinimapVisible };
+
+    case "TOGGLE_THINKING":
+      return { ...state, thinkingEnabled: !state.thinkingEnabled };
+
+    case "SET_THINKING_ENABLED":
+      return { ...state, thinkingEnabled: action.payload };
 
     default:
       return state;
@@ -87,6 +94,20 @@ export default function UIProvider({
   useEffect(() => {
     refreshProviders();
   }, [refreshProviders]);
+
+  // Auto-disable thinking when switching to a model that doesn't support it
+  const selectedModelRef = useRef(state.selectedModel);
+  useEffect(() => {
+    selectedModelRef.current = state.selectedModel;
+  }, [state.selectedModel]);
+
+  useEffect(() => {
+    const provider = state.selectedProvider as keyof typeof MODELS;
+    const modelConfig = MODELS[provider]?.find((m) => m.id === state.selectedModel);
+    if (modelConfig && !modelConfig.supportsThinking) {
+      dispatch({ type: "SET_THINKING_ENABLED", payload: false });
+    }
+  }, [state.selectedModel, state.selectedProvider]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 

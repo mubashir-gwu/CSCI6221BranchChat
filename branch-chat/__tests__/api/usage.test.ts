@@ -68,6 +68,7 @@ describe("GET /api/token-usage", () => {
       inputTokens: 100,
       outputTokens: 200,
       callCount: 5,
+      webSearchRequests: 0,
     });
     expect(data.usage[1]).toEqual({
       model: "claude-sonnet-4-6",
@@ -75,6 +76,7 @@ describe("GET /api/token-usage", () => {
       inputTokens: 50,
       outputTokens: 80,
       callCount: 2,
+      webSearchRequests: 0,
     });
   });
 

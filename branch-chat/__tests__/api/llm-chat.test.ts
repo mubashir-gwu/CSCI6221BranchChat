@@ -265,6 +265,7 @@ describe("POST /api/llm/chat", () => {
           inputTokens: 10,
           outputTokens: 20,
           callCount: 1,
+          webSearchRequests: 0,
         },
         $set: { provider: "openai" },
       },
@@ -465,6 +466,101 @@ describe("POST /api/llm/chat", () => {
         },
         { upsert: true }
       );
+    });
+  });
+
+  // ─── THINKING AND WEB SEARCH TESTS ──────────────────────────────────────────
+
+  describe("thinking stream events", () => {
+    it("should emit thinking SSE events when provider yields thinking chunks", async () => {
+      async function* thinkingStreamGenerator(): AsyncGenerator<StreamChunk> {
+        yield { type: 'thinking', content: 'Let me think...' };
+        yield { type: 'token', content: "Here's my answer" };
+        yield { type: 'done', content: "Here's my answer", thinkingContent: 'Let me think...', inputTokens: 10, outputTokens: 20, webSearchRequestCount: 0, citations: [] };
+      }
+      mockStreamMessage.mockImplementation(() => thinkingStreamGenerator());
+
+      const res = await POST(makeRequest(validBody));
+      const events = await collectSSEEvents(res);
+      const thinkingEvents = events.filter((e) => e.event === "thinking");
+      expect(thinkingEvents.length).toBe(1);
+      expect(thinkingEvents[0].data.content).toBe("Let me think...");
+    });
+  });
+
+  describe("web search citations", () => {
+    it("should include citations in done event when provider returns them", async () => {
+      const mockCitations = [
+        { url: 'https://example.com', title: 'Example' },
+      ];
+      async function* webSearchStreamGenerator(): AsyncGenerator<StreamChunk> {
+        yield { type: 'token', content: "Answer with citations" };
+        yield { type: 'done', content: "Answer with citations", thinkingContent: null, inputTokens: 10, outputTokens: 20, webSearchRequestCount: 1, citations: mockCitations };
+      }
+      mockStreamMessage.mockImplementation(() => webSearchStreamGenerator());
+
+      // Make the node create return citations
+      let createCallCount = 0;
+      mockNodeCreate.mockImplementation((data: Record<string, unknown>) => {
+        createCallCount++;
+        return makeMockNode({
+          id: `node-ws-${createCallCount}`,
+          parentId: data.parentId,
+          role: data.role,
+          content: data.content,
+          provider: data.provider,
+          model: data.model,
+          citations: data.citations,
+        });
+      });
+
+      const res = await POST(makeRequest({ ...validBody, webSearchEnabled: true }));
+      const events = await collectSSEEvents(res);
+      const doneEvents = events.filter((e) => e.event === "done");
+      expect(doneEvents.length).toBe(1);
+      expect(doneEvents[0].data.assistantNode.citations).toEqual(mockCitations);
+    });
+
+    it("should increment webSearchRequests in TokenUsage", async () => {
+      async function* webSearchStreamGenerator(): AsyncGenerator<StreamChunk> {
+        yield { type: 'done', content: "Answer", thinkingContent: null, inputTokens: 10, outputTokens: 20, webSearchRequestCount: 2, citations: [] };
+      }
+      mockStreamMessage.mockImplementation(() => webSearchStreamGenerator());
+
+      const res = await POST(makeRequest({ ...validBody, webSearchEnabled: true }));
+      await collectSSEEvents(res);
+
+      expect(mockTokenUsageFindOneAndUpdate).toHaveBeenCalledWith(
+        { userId: "user-1", model: "gpt-4o" },
+        {
+          $inc: {
+            inputTokens: 10,
+            outputTokens: 20,
+            callCount: 1,
+            webSearchRequests: 2,
+          },
+          $set: { provider: "openai" },
+        },
+        { upsert: true }
+      );
+    });
+
+    it("should disable web search for auto-title generation", async () => {
+      mockConversationFindById.mockResolvedValue({
+        ...mockConversation,
+        title: "New Conversation",
+      });
+
+      const res = await POST(makeRequest({ ...validBody, parentNodeId: null, webSearchEnabled: true }));
+      await collectSSEEvents(res);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // sendMessage called for title with web search disabled
+      expect(mockSendMessage).toHaveBeenCalledTimes(1);
+      const titleOptions = mockSendMessage.mock.calls[0][2];
+      expect(titleOptions.webSearchEnabled).toBe(false);
+      expect(titleOptions.thinkingEnabled).toBe(false);
     });
   });
 

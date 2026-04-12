@@ -496,6 +496,105 @@ describe("export/import with attachments", () => {
   });
 });
 
+// ─── THINKING AND CITATIONS EXPORT/IMPORT TESTS ────────────────────────────
+
+describe("export/import with thinkingContent and citations", () => {
+  const mockCitations = [
+    { url: "https://example.com", title: "Example" },
+    { url: "https://docs.test", title: "Docs" },
+  ];
+
+  const mockNodesWithThinkingAndCitations = [
+    {
+      _id: { toString: () => "node-root" },
+      conversationId: { toString: () => "conv-1" },
+      parentId: null,
+      role: "user",
+      content: "Search for something",
+      provider: null,
+      model: null,
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+    },
+    {
+      _id: { toString: () => "node-1" },
+      conversationId: { toString: () => "conv-1" },
+      parentId: { toString: () => "node-root" },
+      role: "assistant",
+      content: "Here is the answer",
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      thinkingContent: "Let me analyze this...",
+      citations: mockCitations,
+      createdAt: new Date("2026-01-01T00:01:00Z"),
+    },
+  ];
+
+  it("export includes thinkingContent and citations on nodes", async () => {
+    mockAuth.mockResolvedValue(mockSession);
+    mockConversationFindOne.mockResolvedValue(mockConversation);
+    mockNodeFind.mockReturnValue({ lean: vi.fn().mockResolvedValue(mockNodesWithThinkingAndCitations) });
+
+    const req = makeExportRequest("conv-1");
+    const res = await GET(req as any, makeParams("conv-1") as any);
+    expect(res.status).toBe(200);
+
+    const data: ExportedTree = await res.json();
+    const assistantNode = data.nodes.find((n) => n.role === "assistant")!;
+    expect(assistantNode.thinkingContent).toBe("Let me analyze this...");
+    expect(assistantNode.citations).toEqual(mockCitations);
+  });
+
+  it("import restores thinkingContent and citations onto nodes", async () => {
+    mockAuth.mockResolvedValue(mockSession);
+    const createdConv = {
+      _id: { toString: () => "new-conv-1" },
+      title: "Test Conversation",
+    };
+    mockConversationCreate.mockResolvedValue(createdConv);
+    mockNodeInsertMany.mockResolvedValue([]);
+
+    const tree = validExportedTree();
+    tree.nodes[2].thinkingContent = "Thinking about this...";
+    tree.nodes[2].citations = mockCitations;
+
+    const req = makeImportRequest({ jsonData: tree });
+    const res = await POST(req as any);
+    expect(res.status).toBe(201);
+
+    const insertedNodes = mockNodeInsertMany.mock.calls[0][0];
+    const assistantNode = insertedNodes.find((n: any) => n.content === "Hi there!");
+    expect(assistantNode.thinkingContent).toBe("Thinking about this...");
+    expect(assistantNode.citations).toEqual(mockCitations);
+  });
+
+  it("import skips citations with invalid data", async () => {
+    mockAuth.mockResolvedValue(mockSession);
+    const createdConv = {
+      _id: { toString: () => "new-conv-1" },
+      title: "Test Conversation",
+    };
+    mockConversationCreate.mockResolvedValue(createdConv);
+    mockNodeInsertMany.mockResolvedValue([]);
+
+    const tree = validExportedTree();
+    tree.nodes[2].citations = [
+      { url: "https://valid.com", title: "Valid" },
+      { url: "", title: "Invalid" } as any,
+      { url: "https://also-valid.com", title: "Also Valid" },
+    ];
+
+    const req = makeImportRequest({ jsonData: tree });
+    const res = await POST(req as any);
+    expect(res.status).toBe(201);
+
+    const insertedNodes = mockNodeInsertMany.mock.calls[0][0];
+    const assistantNode = insertedNodes.find((n: any) => n.content === "Hi there!");
+    expect(assistantNode.citations).toHaveLength(2);
+    expect(assistantNode.citations[0].url).toBe("https://valid.com");
+    expect(assistantNode.citations[1].url).toBe("https://also-valid.com");
+  });
+});
+
 // ─── ROUND-TRIP TEST ─────────────────────────────────────────────────────────
 
 describe("Round-trip: export → import → export", () => {

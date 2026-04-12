@@ -294,4 +294,65 @@ describe('OpenAI Provider — Responses API', () => {
       // The error path is tested via the try/catch when create() throws
     });
   });
+
+  describe('reasoning params', () => {
+    it('adds reasoning params for o-series when thinking enabled', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'o3', { thinkingEnabled: true, thinkingLevel: 'high' });
+
+      expect(capturedCreateArgs!.reasoning).toEqual({ effort: 'high', summary: 'auto' });
+    });
+
+    it('does not add reasoning params for non-o-series models', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'gpt-4o', { thinkingEnabled: true });
+
+      expect(capturedCreateArgs!.reasoning).toBeUndefined();
+    });
+  });
+
+  describe('web search', () => {
+    it('adds web_search_preview tool when webSearchEnabled is true', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'gpt-4o', { webSearchEnabled: true });
+
+      expect(capturedCreateArgs!.tools).toEqual(
+        expect.arrayContaining([{ type: 'web_search_preview' }])
+      );
+    });
+
+    it('does not add tools when webSearchEnabled is false', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'gpt-4o', { webSearchEnabled: false });
+
+      expect(capturedCreateArgs!.tools).toBeUndefined();
+    });
+
+    it('returns default webSearchRequestCount and citations when search disabled', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      const result = await provider.sendMessage(messages, 'gpt-4o');
+      expect(result.webSearchRequestCount).toBe(0);
+      expect(result.citations).toEqual([]);
+    });
+  });
 });

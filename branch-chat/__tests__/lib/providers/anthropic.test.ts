@@ -183,4 +183,69 @@ describe('Anthropic Provider — Prompt Caching', () => {
       expect(args.system).toBeUndefined();
     });
   });
+
+  describe('thinking params', () => {
+    it('adds thinking params when thinkingEnabled is true', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'claude-sonnet-4-6', { thinkingEnabled: true });
+
+      const args = capturedCreateArgs as Record<string, unknown>;
+      expect(args.temperature).toBe(1);
+      expect(args.max_tokens).toBe(16384);
+      expect(args.thinking).toBeDefined();
+    });
+
+    it('does not add thinking params when thinkingEnabled is false', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'claude-sonnet-4-6', { thinkingEnabled: false });
+
+      const args = capturedCreateArgs as Record<string, unknown>;
+      expect(args.thinking).toBeUndefined();
+    });
+  });
+
+  describe('web search', () => {
+    it('adds web_search_20250305 tool when webSearchEnabled is true', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'claude-sonnet-4-6', { webSearchEnabled: true });
+
+      const args = capturedCreateArgs as Record<string, unknown>;
+      expect(args.tools).toEqual([{ type: 'web_search_20250305', name: 'web_search' }]);
+    });
+
+    it('does not add tools when webSearchEnabled is false', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      await provider.sendMessage(messages, 'claude-sonnet-4-6', { webSearchEnabled: false });
+
+      const args = capturedCreateArgs as Record<string, unknown>;
+      expect(args.tools).toBeUndefined();
+    });
+
+    it('returns default webSearchRequestCount and citations when search disabled', async () => {
+      const provider = await getProvider();
+      const messages: LLMMessage[] = [
+        { role: 'user', content: 'Hello' },
+      ];
+
+      const result = await provider.sendMessage(messages, 'claude-sonnet-4-6');
+      expect(result.webSearchRequestCount).toBe(0);
+      expect(result.citations).toEqual([]);
+    });
+  });
 });

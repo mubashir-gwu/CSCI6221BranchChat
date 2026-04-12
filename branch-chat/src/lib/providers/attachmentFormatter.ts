@@ -40,17 +40,15 @@ function formatForOpenAI(attachments: LLMAttachment[]): unknown[] {
     }
     if (att.mimeType === 'application/pdf') {
       return {
-        type: 'file',
-        file: {
-          filename: att.filename,
-          file_data: `data:application/pdf;base64,${att.data}`,
-        },
+        type: 'input_file',
+        file_data: `data:application/pdf;base64,${att.data}`,
+        filename: att.filename,
       };
     }
     // Images
     return {
-      type: 'image_url',
-      image_url: { url: `data:${att.mimeType};base64,${att.data}` },
+      type: 'input_image',
+      image_url: `data:${att.mimeType};base64,${att.data}`,
     };
   });
 }

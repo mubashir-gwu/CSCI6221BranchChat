@@ -15,9 +15,9 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
+      {/* Sidebar — hidden on mobile, shown on desktop (mobile uses swipeable panels in chat page) */}
       {uiState.isSidebarOpen && (
-        <aside className="flex w-64 flex-col border-r bg-muted/30">
+        <aside className="hidden md:flex w-64 flex-col border-r bg-muted/30">
           <div className="flex h-11 items-center justify-between border-b px-3">
             <Link href="/dashboard" className="text-lg font-semibold hover:opacity-80">BranchChat</Link>
             <ThemeToggle />

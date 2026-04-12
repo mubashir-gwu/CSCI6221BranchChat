@@ -8,6 +8,7 @@ const NodeSchema = new Schema(
     content: { type: String, required: true },
     provider: { type: String, enum: ['openai', 'anthropic', 'gemini', 'mock', null], default: null },
     model: { type: String, default: null },
+    thinkingContent: { type: String, default: null },
     attachments: [{
       filename: { type: String, required: true },
       mimeType: { type: String, required: true },
@@ -37,6 +38,7 @@ export interface INode {
   content: string;
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock' | null;
   model: string | null;
+  thinkingContent?: string | null;
   attachments?: Attachment[];
   createdAt: Date;
 }

@@ -1370,3 +1370,77 @@ None.
 
 ### New Concerns Noticed
 None.
+
+---
+
+## F-29: Web Search & Citations
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-139: Add citations to Node schema and webSearchRequests to TokenUsage
+- Added `citations` subdocument array (`{ url, title }`, `_id: false`) to Node schema and INode interface
+- Added `webSearchRequests` (Number, default 0) to TokenUsage schema and ITokenUsage interface
+- Added `citations` to DBNode type (already present), TreeNode, NodeResponse types
+
+### T-140: Implement Web Search in Anthropic Provider
+- Added `buildWebSearchTools()` helper — injects `web_search_20250305` tool when enabled
+- Added `extractCitations()` — deduplicates citations from TextBlock.citations arrays
+- Added `getWebSearchRequestCount()` — reads from `usage.server_tool_use.web_search_requests`
+- Streaming ignores `server_tool_use` and `web_search_tool_result` delta events
+
+### T-141: Implement Web Search in OpenAI Provider
+- Added `web_search_preview` tool when enabled, coexists with reasoning params
+- `extractCitationsFromOutput()` extracts from message content annotations
+- `countWebSearchCalls()` counts `web_search_call` items in output array
+
+### T-142: Implement Web Search in Gemini Provider
+- Added `googleSearch` tool to config, coexists with thinkingConfig and systemInstruction
+- `extractGeminiCitations()` reads from `groundingMetadata.groundingChunks`, maps `uri` → `url`
+- webSearchRequestCount = 1 when groundingMetadata present
+
+### T-143: Implement Web Search in Mock Provider and Update Auto-Title
+- Mock returns 2 mock citations and webSearchRequestCount: 1 when search enabled
+- Auto-title already passed `{ webSearchEnabled: false, thinkingEnabled: false }` (done in F-28)
+
+### T-144: Add webSearchEnabled State, WebSearchToggle, CitationList
+- Added `webSearchEnabled: boolean` (default: true) to UIContext and UIProvider
+- Added `TOGGLE_WEB_SEARCH` action
+- Created `WebSearchToggle` — Globe icon toggle, icon-only on mobile, icon+label on desktop
+- Created `CitationList` — numbered footnote-style `<a>` links, renders nothing for empty array
+
+### T-145: Update ChatInput and ChatMessage for Web Search UI
+- ChatInput renders WebSearchToggle alongside ThinkingToggle with new props
+- ChatMessage renders CitationList below markdown content for assistant messages with citations
+- ChatPanel (chat page) wires up webSearchEnabled state and passes to ChatInput
+
+### T-146: Update useStreamingChat and Chat API Route
+- useStreamingChat already sends webSearchEnabled in request body (added in interface earlier)
+- Chat route extracts webSearchEnabled, passes in LLMRequestOptions
+- Citations saved on assistant node from done chunk
+- TokenUsage $inc includes webSearchRequests
+- serializeNode includes citations
+
+### T-147: Update Token Usage API and TokenUsageCard
+- `/api/token-usage` response includes `webSearchRequests` per model
+- TokenUsageCard displays "Web searches: N" row per model
+
+### T-148: Update Export/Import for Citations
+- Export includes `citations` field on nodes that have them
+- Import restores `citations`, filtering out invalid entries (missing url/title)
+
+### T-149: Tests for Thinking and Web Search Features
+- Anthropic tests: thinking params, web search tool, citations defaults
+- OpenAI tests: reasoning params for o-series, web search tool, citations defaults
+- LLM chat route tests: thinking SSE events, citations in done event, webSearchRequests tracking, auto-title disables web search
+- Import/export tests: thinkingContent and citations roundtrip, invalid citation filtering
+- Updated existing usage test for webSearchRequests field
+
+### T-150: Component Tests for Thinking and Web Search UI
+- ThinkingToggle: renders, toggles, disabled state, tooltip
+- ThinkingBlock: collapsed default, expand/collapse, streaming pulse, empty content
+- WebSearchToggle: renders Globe, toggles, active styling
+- CitationList: numbered links, target="_blank", empty array renders nothing
+
+### Summary
+All 12 tasks (T-139 through T-150) completed. Build passes, all 241 tests pass (including 17 new tests). Web search implemented across all 4 providers with provider-specific tool types, citation formats, and usage tracking.

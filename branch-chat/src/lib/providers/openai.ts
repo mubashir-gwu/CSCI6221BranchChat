@@ -61,12 +61,27 @@ export const openaiProvider: LLMProvider = {
     if (!isReasoningModel(model)) {
       params.temperature = 1;
     }
+    if (options?.thinkingEnabled && isReasoningModel(model)) {
+      params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
+    }
 
     const response = await client.responses.create(params as any);
 
+    let thinkingContent: string | null = null;
+    if (options?.thinkingEnabled && isReasoningModel(model)) {
+      const reasoningItems = (response.output ?? []).filter((item: any) => item.type === 'reasoning');
+      const summaries = reasoningItems
+        .flatMap((item: any) => item.summary ?? [])
+        .map((s: any) => s.text ?? '')
+        .filter(Boolean);
+      if (summaries.length > 0) {
+        thinkingContent = summaries.join('\n');
+      }
+    }
+
     return {
       content: response.output_text ?? '',
-      thinkingContent: null,
+      thinkingContent,
       provider: 'openai',
       model,
       inputTokens: response.usage?.input_tokens ?? 0,
@@ -96,22 +111,30 @@ export const openaiProvider: LLMProvider = {
       if (!isReasoningModel(model)) {
         params.temperature = 1;
       }
+      if (options?.thinkingEnabled && isReasoningModel(model)) {
+        params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
+      }
 
       const stream = await client.responses.create(params as any);
 
       let accumulated = '';
+      let accumulatedThinking = '';
 
       for await (const event of stream as any) {
         if (event.type === 'response.output_text.delta') {
           const delta = event.delta as string;
           accumulated += delta;
           yield { type: 'token', content: delta };
+        } else if (event.type === 'response.reasoning_summary_text.delta') {
+          const delta = event.delta as string;
+          accumulatedThinking += delta;
+          yield { type: 'thinking', content: delta };
         } else if (event.type === 'response.completed') {
           const usage = event.response?.usage;
           yield {
             type: 'done',
             content: accumulated,
-            thinkingContent: null,
+            thinkingContent: accumulatedThinking || null,
             inputTokens: usage?.input_tokens ?? 0,
             outputTokens: usage?.output_tokens ?? 0,
             webSearchRequestCount: 0,

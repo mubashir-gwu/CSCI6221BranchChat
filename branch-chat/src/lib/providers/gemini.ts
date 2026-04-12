@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 export const geminiProvider: LLMProvider = {
@@ -8,6 +8,7 @@ export const geminiProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): Promise<LLMResponse> {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -43,16 +44,20 @@ export const geminiProvider: LLMProvider = {
 
     return {
       content: response.text ?? '',
+      thinkingContent: null,
       provider: 'gemini',
       model,
       inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+      webSearchRequestCount: 0,
+      citations: [],
     };
   },
 
   async *streamMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): AsyncGenerator<StreamChunk> {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -96,8 +101,11 @@ export const geminiProvider: LLMProvider = {
       yield {
         type: 'done',
         content: accumulated,
+        thinkingContent: null,
         inputTokens: lastUsage?.promptTokenCount ?? 0,
         outputTokens: lastUsage?.candidatesTokenCount ?? 0,
+        webSearchRequestCount: 0,
+        citations: [],
       };
     } catch (error: any) {
       yield { type: 'error', message: error?.message ?? 'Gemini streaming error' };

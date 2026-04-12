@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 type AnthropicMessage = Anthropic.MessageCreateParams['messages'][number];
@@ -53,6 +53,7 @@ export const anthropicProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): Promise<LLMResponse> {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -73,16 +74,20 @@ export const anthropicProvider: LLMProvider = {
 
     return {
       content,
+      thinkingContent: null,
       provider: 'anthropic',
       model,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
+      webSearchRequestCount: 0,
+      citations: [],
     };
   },
 
   async *streamMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): AsyncGenerator<StreamChunk> {
     try {
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -111,8 +116,11 @@ export const anthropicProvider: LLMProvider = {
       yield {
         type: 'done',
         content: finalMessage.content[0].type === 'text' ? finalMessage.content[0].text : '',
+        thinkingContent: null,
         inputTokens: finalMessage.usage.input_tokens,
         outputTokens: finalMessage.usage.output_tokens,
+        webSearchRequestCount: 0,
+        citations: [],
       };
     } catch (error: any) {
       yield { type: 'error', message: error?.message ?? 'Anthropic streaming error' };

@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 function buildOpenAIMessages(messages: LLMMessage[]): any[] {
@@ -21,6 +21,7 @@ export const openaiProvider: LLMProvider = {
   async sendMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): Promise<LLMResponse> {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -31,16 +32,20 @@ export const openaiProvider: LLMProvider = {
 
     return {
       content: response.choices[0].message.content ?? '',
+      thinkingContent: null,
       provider: 'openai',
       model,
       inputTokens: response.usage?.prompt_tokens ?? 0,
       outputTokens: response.usage?.completion_tokens ?? 0,
+      webSearchRequestCount: 0,
+      citations: [],
     };
   },
 
   async *streamMessage(
     messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): AsyncGenerator<StreamChunk> {
     try {
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -59,8 +64,11 @@ export const openaiProvider: LLMProvider = {
           yield {
             type: 'done',
             content: accumulated,
+            thinkingContent: null,
             inputTokens: chunk.usage.prompt_tokens ?? 0,
             outputTokens: chunk.usage.completion_tokens ?? 0,
+            webSearchRequestCount: 0,
+            citations: [],
           };
         } else {
           const content = chunk.choices[0]?.delta?.content;

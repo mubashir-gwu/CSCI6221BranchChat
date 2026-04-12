@@ -1,4 +1,4 @@
-import type { LLMProvider, LLMResponse, LLMMessage, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 
 const MOCK_RESPONSE = `## Mock Response
 
@@ -26,6 +26,7 @@ export const mockProvider: LLMProvider = {
   async sendMessage(
     _messages: LLMMessage[],
     model: string,
+    options?: LLMRequestOptions,
   ): Promise<LLMResponse> {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -39,16 +40,20 @@ export const mockProvider: LLMProvider = {
 
     return {
       content: responseContent,
+      thinkingContent: null,
       provider: 'mock',
       model,
       inputTokens,
       outputTokens,
+      webSearchRequestCount: 0,
+      citations: [],
     };
   },
 
   async *streamMessage(
     _messages: LLMMessage[],
     _model: string,
+    options?: LLMRequestOptions,
   ): AsyncGenerator<StreamChunk> {
     const inputLength = _messages.reduce((sum, m) => sum + m.content.length, 0);
 
@@ -63,8 +68,11 @@ export const mockProvider: LLMProvider = {
     yield {
       type: 'done',
       content: responseContent,
+      thinkingContent: null,
       inputTokens: Math.ceil(inputLength / 4),
       outputTokens: Math.ceil(responseContent.length / 4),
+      webSearchRequestCount: 0,
+      citations: [],
     };
   },
 };

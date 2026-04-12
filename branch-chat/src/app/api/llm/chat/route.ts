@@ -11,7 +11,7 @@ import { TokenUsage } from "@/models/TokenUsage";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
 import { logger } from "@/lib/logger";
-import type { LLMMessage, StreamChunk } from "@/lib/providers/types";
+import type { LLMMessage, LLMRequestOptions, StreamChunk } from "@/lib/providers/types";
 import type { NodeResponse } from "@/types/api";
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ async function generateTitle(
     },
     { role: "user", content: firstUserMessage },
   ];
-  const response = await llmProvider.sendMessage(titleMessages, model);
+  const response = await llmProvider.sendMessage(titleMessages, model, { thinkingEnabled: false, webSearchEnabled: false });
   const title = response.content.trim().slice(0, 200);
 
   await Conversation.findByIdAndUpdate(conversationId, { title });
@@ -67,6 +67,7 @@ function serializeNode(doc: any): NodeResponse {
     content: doc.content,
     provider: doc.provider ?? null,
     model: doc.model ?? null,
+    ...(doc.thinkingContent ? { thinkingContent: doc.thinkingContent } : {}),
     ...(doc.attachments?.length ? { attachments: doc.attachments } : {}),
     createdAt: doc.createdAt.toISOString(),
   };
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { conversationId, parentNodeId, content, provider, model, attachments } = body;
+    const { conversationId, parentNodeId, content, provider, model, attachments, thinkingEnabled } = body;
 
     // Auth check
     const session = await auth();
@@ -220,13 +221,20 @@ export async function POST(request: Request) {
     // Capture userId before stream (session already validated above)
     const userId = session!.user!.id;
 
+    // Build LLM request options
+    const llmOptions: LLMRequestOptions = {
+      thinkingEnabled: thinkingEnabled && modelDef.supportsThinking,
+      thinkingLevel: modelDef.maxThinkingLevel ?? undefined,
+    };
+
     // Start streaming — nodes are saved to DB only on successful completion
     const llmProvider = getProvider(provider);
-    logger.info("LLM stream started", { context: { requestId, conversationId, userId }, provider, model, messageCount: messages.length });
+    logger.info("LLM stream started", { context: { requestId, conversationId, userId }, provider, model, messageCount: messages.length, thinkingEnabled: llmOptions.thinkingEnabled });
     logger.debug("LLM messages", { context: { requestId, conversationId }, messages });
 
     const encoder = new TextEncoder();
     let accumulated = '';
+    let accumulatedThinking = '';
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -234,7 +242,7 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(':\n\n'));
 
         try {
-          const generator = llmProvider.streamMessage(messages, model);
+          const generator = llmProvider.streamMessage(messages, model, llmOptions);
 
           for await (const chunk of generator) {
             if (request.signal?.aborted) {
@@ -246,6 +254,11 @@ export async function POST(request: Request) {
               accumulated += chunk.content;
               controller.enqueue(
                 encoder.encode(encodeSSEEvent('token', { content: chunk.content }))
+              );
+            } else if (chunk.type === 'thinking') {
+              accumulatedThinking += chunk.content;
+              controller.enqueue(
+                encoder.encode(encodeSSEEvent('thinking', { content: chunk.content }))
               );
             } else if (chunk.type === 'done') {
               // Save both nodes to DB only on successful completion
@@ -266,6 +279,7 @@ export async function POST(request: Request) {
                 content: chunk.content,
                 provider,
                 model,
+                thinkingContent: chunk.thinkingContent || null,
               });
 
               // Set rootNodeId if first message

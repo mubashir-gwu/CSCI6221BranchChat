@@ -1,6 +1,26 @@
 import { GoogleGenAI } from '@google/genai';
-import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk, Citation } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
+
+function extractGeminiCitations(candidate: any): Citation[] {
+  const chunks = candidate?.groundingMetadata?.groundingChunks;
+  if (!Array.isArray(chunks)) return [];
+  const seen = new Set<string>();
+  const citations: Citation[] = [];
+  for (const chunk of chunks) {
+    const url = chunk?.web?.uri;
+    const title = chunk?.web?.title;
+    if (url && title && !seen.has(url)) {
+      seen.add(url);
+      citations.push({ url, title });
+    }
+  }
+  return citations;
+}
+
+function hasGroundingMetadata(candidate: any): boolean {
+  return !!(candidate?.groundingMetadata?.groundingChunks?.length);
+}
 
 export const geminiProvider: LLMProvider = {
   name: 'gemini',
@@ -45,6 +65,9 @@ export const geminiProvider: LLMProvider = {
         includeThoughts: true,
       };
     }
+    if (options?.webSearchEnabled) {
+      config.tools = [{ googleSearch: {} }];
+    }
 
     const chat = ai.chats.create({
       model,
@@ -64,6 +87,10 @@ export const geminiProvider: LLMProvider = {
       }
     }
 
+    const candidate = response.candidates?.[0];
+    const citations = extractGeminiCitations(candidate);
+    const webSearchRequestCount = hasGroundingMetadata(candidate) ? 1 : 0;
+
     return {
       content: response.text ?? '',
       thinkingContent,
@@ -71,8 +98,8 @@ export const geminiProvider: LLMProvider = {
       model,
       inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
-      webSearchRequestCount: 0,
-      citations: [],
+      webSearchRequestCount,
+      citations,
     };
   },
 
@@ -110,6 +137,9 @@ export const geminiProvider: LLMProvider = {
           includeThoughts: true,
         };
       }
+      if (options?.webSearchEnabled) {
+        config.tools = [{ googleSearch: {} }];
+      }
 
       const stream = await ai.models.generateContentStream({
         model,
@@ -120,9 +150,11 @@ export const geminiProvider: LLMProvider = {
       let accumulated = '';
       let accumulatedThinking = '';
       let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
+      let lastCandidate: any = null;
 
       for await (const chunk of stream) {
         if (chunk.candidates?.[0]?.content?.parts) {
+          lastCandidate = chunk.candidates[0];
           for (const part of chunk.candidates[0].content.parts) {
             const partText = (part as any).text ?? '';
             if (!partText) continue;
@@ -140,11 +172,17 @@ export const geminiProvider: LLMProvider = {
             accumulated += text;
             yield { type: 'token', content: text };
           }
+          if (chunk.candidates?.[0]) {
+            lastCandidate = chunk.candidates[0];
+          }
         }
         if (chunk.usageMetadata) {
           lastUsage = chunk.usageMetadata;
         }
       }
+
+      const citations = extractGeminiCitations(lastCandidate);
+      const webSearchRequestCount = hasGroundingMetadata(lastCandidate) ? 1 : 0;
 
       yield {
         type: 'done',
@@ -152,8 +190,8 @@ export const geminiProvider: LLMProvider = {
         thinkingContent: accumulatedThinking || null,
         inputTokens: lastUsage?.promptTokenCount ?? 0,
         outputTokens: lastUsage?.candidatesTokenCount ?? 0,
-        webSearchRequestCount: 0,
-        citations: [],
+        webSearchRequestCount,
+        citations,
       };
     } catch (error: any) {
       yield { type: 'error', message: error?.message ?? 'Gemini streaming error' };

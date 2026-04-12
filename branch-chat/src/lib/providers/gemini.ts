@@ -35,16 +35,38 @@ export const geminiProvider: LLMProvider = {
       ? systemMessages.map((m) => m.content).join('\n')
       : undefined;
 
+    const config: Record<string, unknown> = {};
+    if (systemInstruction) {
+      config.systemInstruction = systemInstruction;
+    }
+    if (options?.thinkingEnabled) {
+      config.thinkingConfig = {
+        thinkingLevel: options.thinkingLevel ?? 'high',
+        includeThoughts: true,
+      };
+    }
+
     const chat = ai.chats.create({
       model,
       history,
-      ...(systemInstruction ? { config: { systemInstruction } } : {}),
+      ...(Object.keys(config).length > 0 ? { config } : {}),
     });
     const response = await chat.sendMessage({ message: lastParts });
 
+    let thinkingContent: string | null = null;
+    if (options?.thinkingEnabled && response.candidates?.[0]?.content?.parts) {
+      const thoughtParts = response.candidates[0].content.parts
+        .filter((p: any) => p.thought === true)
+        .map((p: any) => p.text ?? '')
+        .filter(Boolean);
+      if (thoughtParts.length > 0) {
+        thinkingContent = thoughtParts.join('');
+      }
+    }
+
     return {
       content: response.text ?? '',
-      thinkingContent: null,
+      thinkingContent,
       provider: 'gemini',
       model,
       inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
@@ -78,20 +100,46 @@ export const geminiProvider: LLMProvider = {
         return { role: m.role === 'assistant' ? 'model' : 'user', parts };
       });
 
+      const config: Record<string, unknown> = {};
+      if (systemInstruction) {
+        config.systemInstruction = systemInstruction;
+      }
+      if (options?.thinkingEnabled) {
+        config.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel ?? 'high',
+          includeThoughts: true,
+        };
+      }
+
       const stream = await ai.models.generateContentStream({
         model,
         contents,
-        ...(systemInstruction ? { config: { systemInstruction } } : {}),
+        ...(Object.keys(config).length > 0 ? { config } : {}),
       });
 
       let accumulated = '';
+      let accumulatedThinking = '';
       let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number } | undefined;
 
       for await (const chunk of stream) {
-        const text = chunk.text;
-        if (text) {
-          accumulated += text;
-          yield { type: 'token', content: text };
+        if (chunk.candidates?.[0]?.content?.parts) {
+          for (const part of chunk.candidates[0].content.parts) {
+            const partText = (part as any).text ?? '';
+            if (!partText) continue;
+            if ((part as any).thought === true) {
+              accumulatedThinking += partText;
+              yield { type: 'thinking', content: partText };
+            } else {
+              accumulated += partText;
+              yield { type: 'token', content: partText };
+            }
+          }
+        } else {
+          const text = chunk.text;
+          if (text) {
+            accumulated += text;
+            yield { type: 'token', content: text };
+          }
         }
         if (chunk.usageMetadata) {
           lastUsage = chunk.usageMetadata;
@@ -101,7 +149,7 @@ export const geminiProvider: LLMProvider = {
       yield {
         type: 'done',
         content: accumulated,
-        thinkingContent: null,
+        thinkingContent: accumulatedThinking || null,
         inputTokens: lastUsage?.promptTokenCount ?? 0,
         outputTokens: lastUsage?.candidatesTokenCount ?? 0,
         webSearchRequestCount: 0,

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatInput from "@/components/chat/ChatInput";
 import TreeSidebar from "@/components/tree/TreeSidebar";
+import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
 
@@ -23,6 +24,7 @@ function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
     content: n.content,
     provider: n.provider,
     model: n.model,
+    ...(n.thinkingContent ? { thinkingContent: n.thinkingContent } : {}),
     ...(n.attachments?.length ? { attachments: n.attachments } : {}),
     createdAt: n.createdAt,
   };
@@ -37,6 +39,7 @@ export default function ChatPage() {
   const {
     sendStreamingMessage,
     streamingContent,
+    streamingThinkingContent,
     streamingState,
     abortStream,
   } = useStreamingChat();
@@ -151,6 +154,7 @@ export default function ChatPage() {
         provider,
         model,
         ...(attachments?.length ? { attachments } : {}),
+        thinkingEnabled: uiState.thinkingEnabled,
       });
 
       // Remove optimistic node
@@ -307,6 +311,11 @@ export default function ChatPage() {
 
   const isStreaming = streamingState === 'streaming';
 
+  const selectedModelConfig = MODELS[uiState.selectedProvider as keyof typeof MODELS]?.find(
+    (m) => m.id === uiState.selectedModel
+  );
+  const thinkingDisabled = !selectedModelConfig?.supportsThinking;
+
   return (
     <div className="flex h-full">
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -330,6 +339,7 @@ export default function ChatPage() {
             onDeleteNode={handleDeleteNode}
             isLoading={uiState.isLoading}
             streamingContent={streamingContent}
+            streamingThinkingContent={streamingThinkingContent}
             streamingState={streamingState}
           />
         </div>
@@ -342,6 +352,10 @@ export default function ChatPage() {
           streamingState={streamingState}
           onStopStreaming={abortStream}
           restoredMessage={restoredMessage}
+          thinkingEnabled={uiState.thinkingEnabled}
+          onThinkingToggle={() => uiDispatch({ type: "TOGGLE_THINKING" })}
+          thinkingDisabled={thinkingDisabled}
+          selectedModel={selectedModelConfig?.name}
         />
       </div>
       <TreeSidebar

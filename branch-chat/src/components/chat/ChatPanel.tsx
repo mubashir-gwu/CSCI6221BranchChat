@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatMessage from "./ChatMessage";
+import ThinkingBlock from "./ThinkingBlock";
 import LoadingIndicator from "./LoadingIndicator";
 import type { TreeNode, ChildrenMap } from "@/types/tree";
 import type { StreamingState } from "@/hooks/useStreamingChat";
@@ -18,6 +19,7 @@ interface ChatPanelProps {
   onDeleteNode?: (nodeId: string) => void;
   isLoading: boolean;
   streamingContent?: string;
+  streamingThinkingContent?: string;
   streamingState?: StreamingState;
 }
 
@@ -32,6 +34,7 @@ export default function ChatPanel({
   onDeleteNode,
   isLoading,
   streamingContent,
+  streamingThinkingContent,
   streamingState,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -77,15 +80,20 @@ export default function ChatPanel({
             />
           );
         })}
-        {isStreaming && streamingContent ? (
+        {isStreaming && (streamingContent || streamingThinkingContent) ? (
           <div className="flex justify-start mb-4">
             <div className="relative max-w-[80%] rounded-lg px-4 py-3 bg-muted border-l-4 border-l-muted-foreground/30">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p className="whitespace-pre-wrap">
-                  {streamingContent}
-                  <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
-                </p>
-              </div>
+              {streamingThinkingContent && (
+                <ThinkingBlock content={streamingThinkingContent} isStreaming={!streamingContent} />
+              )}
+              {streamingContent && (
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <p className="whitespace-pre-wrap">
+                    {streamingContent}
+                    <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         ) : isStreaming ? (

@@ -5,6 +5,7 @@ export interface TreeNode {
   content: string;
   provider: string | null;
   model: string | null;
+  thinkingContent?: string | null;
   attachments?: { filename: string; mimeType: string; data: string; size: number }[];
   createdAt: string;
 }

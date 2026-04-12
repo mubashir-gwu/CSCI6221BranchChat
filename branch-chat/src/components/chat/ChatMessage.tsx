@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
 import CopyMarkdownButton from "./CopyMarkdownButton";
+import ThinkingBlock from "./ThinkingBlock";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { TreeNode } from "@/types/tree";
 
@@ -26,6 +27,7 @@ interface ChatMessageProps {
   onBranchFromHere?: (nodeId: string) => void;
   onGoBack?: () => void;
   onDelete?: (nodeId: string) => void;
+  streamingThinkingContent?: string;
 }
 
 export default function ChatMessage({
@@ -40,6 +42,7 @@ export default function ChatMessage({
   onBranchFromHere,
   onGoBack,
   onDelete,
+  streamingThinkingContent,
 }: ChatMessageProps) {
   const [showBranchMenu, setShowBranchMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -106,6 +109,16 @@ export default function ChatMessage({
               {provider?.displayName ?? node.provider} / {node.model}
             </span>
           </div>
+        )}
+
+        {/* Thinking content (completed messages) */}
+        {!isUser && node.thinkingContent && (
+          <ThinkingBlock content={node.thinkingContent} />
+        )}
+
+        {/* Streaming thinking content */}
+        {!isUser && streamingThinkingContent && (
+          <ThinkingBlock content={streamingThinkingContent} isStreaming />
         )}
 
         {/* Message content with Markdown rendering */}

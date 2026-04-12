@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SendIcon, SquareIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import FileUploadArea, { FilePreviewChips } from "./FileUploadArea";
+import ThinkingToggle from "./ThinkingToggle";
 import type { StreamingState } from "@/hooks/useStreamingChat";
 
 interface AttachmentData {
@@ -23,6 +24,10 @@ interface ChatInputProps {
   streamingState?: StreamingState;
   onStopStreaming?: () => void;
   restoredMessage?: string;
+  thinkingEnabled?: boolean;
+  onThinkingToggle?: () => void;
+  thinkingDisabled?: boolean;
+  selectedModel?: string;
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -48,6 +53,10 @@ export default function ChatInput({
   streamingState,
   onStopStreaming,
   restoredMessage,
+  thinkingEnabled,
+  onThinkingToggle,
+  thinkingDisabled,
+  selectedModel,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -142,12 +151,20 @@ export default function ChatInput({
         files={files}
         onRemove={(index) => setFiles(files.filter((_, i) => i !== index))}
       />
-      <div className="mt-2">
+      <div className="mt-2 flex items-center gap-2">
         <ModelSelector
           value={selection}
           onChange={setSelection}
           availableProviders={availableProviders}
         />
+        {onThinkingToggle && (
+          <ThinkingToggle
+            enabled={thinkingEnabled ?? false}
+            onToggle={onThinkingToggle}
+            disabled={thinkingDisabled ?? false}
+            modelName={selectedModel}
+          />
+        )}
       </div>
     </div>
   );

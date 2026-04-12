@@ -213,6 +213,8 @@ interface INode {
     content: string;
     provider: string | null;
     model: string | null;
+    thinkingContent?: string | null;
+    citations?: { url: string; title: string }[];
     createdAt: Date;
 }
 // { timestamps: { createdAt: true, updatedAt: false } }.
@@ -266,7 +268,7 @@ All routes require auth unless PUBLIC. Return 401 if no session, 403 if wrong ow
 **POST `/api/llm/chat`** — `maxDuration = 60`
 
 ```
-Request:  { conversationId, parentNodeId, content, provider, model }
+Request:  { conversationId, parentNodeId, content, provider, model, webSearchEnabled?, thinkingEnabled? }
 201:      { userNode, assistantNode }
 422:      "Provider [name] is not configured."
 429:      "Rate limited by [provider]."
@@ -320,21 +322,47 @@ dagreGraph.setNode(id, { width: node.measured?.width ?? 180, height: node.measur
 ## LLM Providers
 
 ```typescript
+interface LLMRequestOptions {
+    webSearchEnabled?: boolean;
+    thinkingEnabled?: boolean;
+    thinkingLevel?: string;
+}
+
+interface Citation {
+    url: string;
+    title: string;
+}
+
 interface LLMProvider {
     name: string;
     sendMessage(
         messages: LLMMessage[],
         model: string,
+        options?: LLMRequestOptions,
     ): Promise<LLMResponse>;
+    streamMessage(
+        messages: LLMMessage[],
+        model: string,
+        options?: LLMRequestOptions,
+    ): AsyncGenerator<StreamChunk>;
 }
 
 interface LLMResponse {
     content: string;
+    thinkingContent: string | null;
     provider: string;
     model: string;
     inputTokens: number;
     outputTokens: number;
+    webSearchRequestCount: number;
+    citations: Citation[];
 }
+
+type StreamChunk =
+    | { type: 'token'; content: string }
+    | { type: 'thinking'; content: string }
+    | { type: 'done'; content: string; thinkingContent: string | null; inputTokens: number; outputTokens: number; webSearchRequestCount: number; citations: Citation[] }
+    | { type: 'error'; message: string };
 ```
 
 Each provider reads its API key from the corresponding environment variable internally. No `apiKey` parameter.

@@ -1,0 +1,12 @@
+Audit passed. No issues found.
+
+All acceptance criteria for T-124 and T-125 are met:
+- LLMRequestOptions, Citation interfaces exported from types.ts
+- StreamChunk has thinking variant and extended done variant
+- LLMResponse includes thinkingContent, webSearchRequestCount, citations
+- All four providers accept options? parameter and return extended response shape
+- Database, API, and export types updated with new fields
+- npm run build passes, all 190 tests pass
+- No behavioral changes — pure interface plumbing
+
+CLAUDE.md updated to reflect the new provider interface.

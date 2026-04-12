@@ -5,10 +5,11 @@ You are a code audit team reviewing a feature that was just implemented for the 
 
 ## Reference Documents
 - `CLAUDE.md` — The master specification
-- `docs/Task Breakdown Document - Feature Set 2.md` — The task list with acceptance criteria for this round's features
-- `docs/Architecture Delta Document - Feature Set 2.md` — The architecture changes for this round
+- `docs/Task Breakdown Document - Feature Set 3.md` — The task list with acceptance criteria for this round's features
+- `docs/Architecture Delta Document - Feature Set 3.md` — The architecture changes for this round
 - `docs/Architecture Document.md` — The original architecture design document
-- `docs/Architecture Delta Document - Feature Set 1.md` — The previous round's architecture changes (for full context)
+- `docs/Architecture Delta Document - Feature Set 1.md` — The first round's architecture changes (for full context)
+- `docs/Architecture Delta Document - Feature Set 2.md` — The second round's architecture changes (for full context)
 - `docs/SRD BranchChat.docx` — The original requirements document
 
 ## Instructions
@@ -18,7 +19,7 @@ Review all code related to the specified feature. Produce a comprehensive audit 
 ## The Five Audit Perspectives
 
 ### 1. Spec Compliance
-For EVERY acceptance criterion listed for the feature's tasks in `docs/Task Breakdown Document - Feature Set 2.md`:
+For EVERY acceptance criterion listed for the feature's tasks in `docs/Task Breakdown Document - Feature Set 3.md`:
 - **PASS:** Criterion is met. State the evidence (file, function, behavior).
 - **FAIL:** Criterion is not met. State what's missing or wrong.
 - **PARTIAL:** Partially met. State what works and what doesn't.
@@ -33,6 +34,7 @@ Read all source files for this feature. Look for:
 - Race conditions (concurrent state updates)
 - Memory leaks (missing cleanup in useEffect, unclosed connections)
 - Streaming-specific issues (unclosed streams, missing abort handling, chunks not flushed)
+- Provider-specific issues (wrong parameter names for thinking/web search, missing temperature constraints)
 
 For each bug: file, function/line, description, severity (Critical / Medium / Low).
 
@@ -48,7 +50,7 @@ Focus on API routes and auth:
 For each issue: file, vulnerability, severity, suggested fix.
 
 ### 4. Architecture Alignment
-Compare the implementation against `CLAUDE.md` and `docs/Architecture Delta Document - Feature Set 2.md`:
+Compare the implementation against `CLAUDE.md` and `docs/Architecture Delta Document - Feature Set 3.md`:
 - Does the folder structure match?
 - Do Mongoose models match the specified schema?
 - Do API routes match the specified contracts?
@@ -56,6 +58,7 @@ Compare the implementation against `CLAUDE.md` and `docs/Architecture Delta Docu
 - Is data flow between components as designed?
 - Any files that shouldn't exist, or missing files that should?
 - Any quiet deviations from the architecture?
+- Do provider implementations match the specified SDK usage patterns (Responses API for OpenAI, server tools for Anthropic, thinkingConfig for Gemini)?
 
 For each deviation: what was specified, what was implemented, whether it's acceptable.
 
@@ -79,6 +82,9 @@ For each concern: current code, future need, compatibility assessment.
 - Does the folder structure section reflect any new or moved files?
 - Are schema changes (new fields, changed indexes) reflected?
 - Are any removed files/routes/components still listed in `CLAUDE.md`?
+- Does the provider interface section reflect the new `LLMRequestOptions` parameter?
+- Does the `StreamChunk` type include the `thinking` chunk type?
+- Are the updated models (with `supportsThinking`, `maxThinkingLevel`) documented?
 
 **If `CLAUDE.md` is inaccurate or incomplete**, update it to match the actual implementation. This is the ONE exception to the "do not modify source code" rule — `CLAUDE.md` must always be the source of truth. Document every change you make in the audit report under a dedicated **CLAUDE.md Updates** section.
 

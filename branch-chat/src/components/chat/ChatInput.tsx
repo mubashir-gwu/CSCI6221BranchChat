@@ -122,7 +122,7 @@ export default function ChatInput({
   };
 
   return (
-    <div className="border-t bg-background p-4">
+    <div className="sticky bottom-0 border-t bg-background p-4">
       <div className="flex items-center gap-2">
         <FileUploadArea
           files={files}
@@ -163,7 +163,7 @@ export default function ChatInput({
         files={files}
         onRemove={(index) => setFiles(files.filter((_, i) => i !== index))}
       />
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <ModelSelector
           value={selection}
           onChange={handleModelChange}

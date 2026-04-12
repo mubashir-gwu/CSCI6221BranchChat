@@ -1216,3 +1216,16 @@ Updated the Gemini model entry in:
 - Created `__tests__/components/chat/CopyMarkdownButton.test.tsx` with 4 tests
 - Tests: renders clipboard icon, calls writeText with content, icon changes to check, reverts after 2s (fake timers)
 - All 190 tests pass, build passes
+
+## F-25: Models Config Update
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-123: Add Thinking Support Fields and New Models to models.ts
+- Added `ModelConfig` interface with `supportsThinking: boolean` and `maxThinkingLevel: string | null` fields
+- Updated all existing model entries with new fields (GPT-4o/4o-mini: false/null, Sonnet 4.6: true/"high", Opus 4.6: true/"max", Haiku 4.5: false/null, Gemini 3 Flash: false/null, Mock: false/null)
+- Added three new models: `o3` (OpenAI, thinking: high), `o4-mini` (OpenAI, thinking: high), `gemini-3.1-pro-preview` (Gemini, thinking: high)
+- Changed MODELS type from `as const` object to `Record<string, readonly ModelConfig[]>` for proper typing
+- Updated CLAUDE.md with Feature Set 3 reference documents and models config documentation
+- Build passes

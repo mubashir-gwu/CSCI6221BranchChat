@@ -10,9 +10,13 @@ These are the authoritative source documents. If anything in this file seems amb
 
 - **Software Requirements Document:** `docs/SRD BranchChat.docx`
 - **Architecture Design Document:** `docs/Architecture Document.md`
-- **Architecture Delta Document:** `docs/Architecture Delta Document - Feature Set 1.md`
+- **Architecture Delta Document (Feature Set 1):** `docs/Architecture Delta Document - Feature Set 1.md`
+- **Architecture Delta Document (Feature Set 2):** `docs/Architecture Delta Document - Feature Set 2.md`
+- **Architecture Delta Document (Feature Set 3):** `docs/Architecture Delta Document - Feature Set 3.md`
 - **Architecture Deliberation Transcript:** `docs/decisions/Architecture Debate.md`
-- **Task Breakdown Document:** `docs/Task Breakdown Document - Feature Set 1.md`
+- **Task Breakdown Document (Feature Set 1):** `docs/Task Breakdown Document - Feature Set 1.md`
+- **Task Breakdown Document (Feature Set 2):** `docs/Task Breakdown Document - Feature Set 2.md`
+- **Task Breakdown Document (Feature Set 3):** `docs/Task Breakdown Document - Feature Set 3.md`
 - **Runtime log with workarounds and known issues from previous features:** `docs/Execution Log.md`
 
 ## Project Root
@@ -163,7 +167,7 @@ branch-chat/
 │   │
 │   ├── models/            User, Conversation, Node, TokenUsage (Mongoose 9, async hooks)
 │   ├── types/             database, api, tree, llm, export
-│   └── constants/         providers.ts, models.ts
+│   └── constants/         providers.ts, models.ts (ModelConfig with supportsThinking, maxThinkingLevel)
 │
 └── __tests__/             mirrors src/
 ```

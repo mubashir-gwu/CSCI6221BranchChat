@@ -236,11 +236,19 @@ export default function ChatPage() {
 
   const handleBranchNavigate = useCallback(
     (nodeId: string) => {
-      const leafId = findDeepestLeaf(nodeId, childrenMap);
-      dispatch({ type: "SET_ACTIVE_NODE", payload: leafId });
-      window.location.hash = leafId;
-      setPathEndNodeId(null);
-      setTreeHighlightNodeId(null);
+      // Walk forward to next branch point or leaf, same as tree click
+      let endId = nodeId;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const children = childrenMap.get(endId) ?? [];
+        if (children.length !== 1) break;
+        endId = children[0];
+      }
+      dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
+      window.location.hash = nodeId;
+      setPathEndNodeId(endId !== nodeId ? endId : null);
+      setScrollToNodeId(nodeId);
+      setTreeHighlightNodeId(nodeId);
     },
     [childrenMap, dispatch]
   );

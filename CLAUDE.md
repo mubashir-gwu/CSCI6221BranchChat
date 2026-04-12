@@ -108,6 +108,7 @@ branch-chat/
 │   │   │                                # @custom-variant dark (&:where(.dark, .dark *));
 │   │   │                                # @layer base { @import "@xyflow/react/dist/style.css"; }
 │   │   │                                # @theme inline { --color-*: ...; --radius-*: ...; }
+│   │   │                                # .panel-container / .panel-item: scroll-snap mobile layout (100dvh, hidden scrollbar)
 │   │   ├── layout.tsx                   # Root: AuthProvider + ThemeProvider + ToastProvider
 │   │   ├── page.tsx                     # Redirect → /login or /dashboard
 │   │   │
@@ -116,9 +117,9 @@ branch-chat/
 │   │   │   └── register/page.tsx
 │   │   │
 │   │   ├── (protected)/
-│   │   │   ├── layout.tsx               # ConversationProvider + UIProvider + sidebar + ThemeToggle
+│   │   │   ├── layout.tsx               # ConversationProvider + UIProvider + sidebar (desktop only: hidden md:flex) + ThemeToggle
 │   │   │   ├── dashboard/page.tsx
-│   │   │   ├── chat/[conversationId]/page.tsx
+│   │   │   ├── chat/[conversationId]/page.tsx  # Mobile: swipeable 3-panel layout (sidebar, chat, tree). Desktop: standard layout.
 │   │   │   └── usage/page.tsx           # Token usage per provider
 │   │   │
 │   │   └── api/
@@ -452,7 +453,7 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **ChatPanel**         | `activePath[]`, `onBranchNavigate`                         | Maps → ChatMessage. Auto-scroll. LoadingIndicator.              |
 | **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. |
 | **CopyMarkdownButton**| `{ content: string }`                                      | ClipboardCopy icon button. Copies raw markdown to clipboard. Swaps to Check icon for 2s. No toast. |
-| **ChatInput**         | `onSend`, `disabled`, `defaultProvider`, `defaultModel`    | Textarea + send + ModelSelector. Clears on send.                |
+| **ChatInput**         | `onSend`, `disabled`, `defaultProvider`, `defaultModel`    | Textarea + send + ModelSelector. Clears on send. Sticky bottom on mobile. Toggles (ThinkingToggle, WebSearchToggle) show icon-only on mobile, icon+label on desktop. `flex-wrap` on toggles row. |
 | **ModelSelector**     | `value`, `onChange`, `availableProviders`                  | shadcn DropdownMenu, provider-grouped, color-coded. Unavailable providers greyed out (`opacity-50 pointer-events-none`). |
 | **BranchIndicator**   | `nodeId`, `branchCount`, `onClick`                         | Badge. Click → BranchMenu.                                      |
 | **BranchMenu**        | `parentNodeId`, `children[]`, `activeChildId`, `onSelect`  | Sibling list with preview + color. "New branch from here" option at bottom. |
@@ -462,6 +463,7 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **ThemeToggle**       | none                                                       | Cycle button: light → dark → system (Sun/Moon/Monitor icons). Uses `useTheme()` from `next-themes`. |
 | **ThinkingToggle**    | `{ enabled, onToggle, disabled, modelName? }`              | Brain icon toggle. `opacity-50 pointer-events-none` when disabled. Tooltip "Not available for {modelName}". Icon-only on mobile, icon+label on desktop. |
 | **ThinkingBlock**     | `{ content, isStreaming? }`                                | Collapsible thinking display above assistant response. Default collapsed. Pulsing header when streaming. Plain text, muted styling, `border-l-2 border-muted pl-3`. |
+| **PanelIndicator**    | `{ activeIndex: number; count: number }`                   | Dot indicators for mobile swipeable panel navigation. `w-2 h-2 rounded-full`, `bg-primary` active / `bg-muted` inactive. Hidden on desktop (`md:hidden`). |
 | **TokenUsageCard**    | none (fetches from `/api/token-usage` internally)          | Table/card showing per-provider token usage (input, output, total calls). |
 
 ---

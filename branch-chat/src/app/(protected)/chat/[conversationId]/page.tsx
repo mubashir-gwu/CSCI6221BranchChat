@@ -209,7 +209,7 @@ export default function ChatPage() {
         });
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage]
+    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled]
   );
 
   const handleBranchNavigate = useCallback(

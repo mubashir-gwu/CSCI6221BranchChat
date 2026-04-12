@@ -23,7 +23,7 @@ export const MODELS: Record<string, readonly ModelConfig[]> = {
     { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', contextWindow: 1048576, supportsThinking: true, maxThinkingLevel: 'high' },
   ],
   mock: [
-    { id: 'mock-model', name: 'Mock Model', contextWindow: 16000, supportsThinking: false, maxThinkingLevel: null },
+    { id: 'mock-model', name: 'Mock Model', contextWindow: 16000, supportsThinking: true, maxThinkingLevel: 'high' },
   ],
 } as const;
 

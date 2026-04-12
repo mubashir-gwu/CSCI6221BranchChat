@@ -1355,3 +1355,18 @@ Updated the Gemini model entry in:
 - Import: restores thinkingContent from imported JSON
 - Nodes GET route: includes thinkingContent in serialized response
 - Build passes, no errors
+
+## F-28 Extended Thinking — Audit Cycle 1 Fixes
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### Fixes Applied (2/2)
+1. **Stale closure on `uiState.thinkingEnabled` in `handleSend`** — Added `uiState.thinkingEnabled` to the `useCallback` dependency array in `chat/[conversationId]/page.tsx:212`
+2. **Mock model `supportsThinking: false` prevents testing thinking flow** — Changed mock-model config to `supportsThinking: true, maxThinkingLevel: 'high'` in `constants/models.ts:26`
+
+### Fixes That Could Not Be Applied
+None.
+
+### New Concerns Noticed
+None.

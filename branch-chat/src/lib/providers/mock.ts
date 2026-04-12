@@ -2,6 +2,11 @@ import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChu
 
 const MOCK_THINKING = 'Mock thinking: analyzing the request...\nConsidering multiple approaches...\nFormulating response...';
 
+const MOCK_CITATIONS = [
+  { url: 'https://example.com/result1', title: 'Mock Search Result 1' },
+  { url: 'https://example.com/result2', title: 'Mock Search Result 2' },
+];
+
 const MOCK_RESPONSE = `## Mock Response
 
 This is a **mock response** for development.
@@ -47,8 +52,8 @@ export const mockProvider: LLMProvider = {
       model,
       inputTokens,
       outputTokens,
-      webSearchRequestCount: 0,
-      citations: [],
+      webSearchRequestCount: options?.webSearchEnabled ? 1 : 0,
+      citations: options?.webSearchEnabled ? MOCK_CITATIONS : [],
     };
   },
 
@@ -79,8 +84,8 @@ export const mockProvider: LLMProvider = {
       thinkingContent: options?.thinkingEnabled ? MOCK_THINKING : null,
       inputTokens: Math.ceil(inputLength / 4),
       outputTokens: Math.ceil(responseContent.length / 4),
-      webSearchRequestCount: 0,
-      citations: [],
+      webSearchRequestCount: options?.webSearchEnabled ? 1 : 0,
+      citations: options?.webSearchEnabled ? MOCK_CITATIONS : [],
     };
   },
 };

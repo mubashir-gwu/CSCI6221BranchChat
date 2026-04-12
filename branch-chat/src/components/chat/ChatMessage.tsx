@@ -194,7 +194,7 @@ export default function ChatMessage({
                     setShowBranchMenu(false);
                     onBranchClick(childId);
                   }}
-                  onNavigateToNode={onNavigateToNode ? (nodeId) => {
+                  onNavigateToNode={onNavigateToNode && !isLast ? (nodeId) => {
                     setShowBranchMenu(false);
                     onNavigateToNode(nodeId);
                   } : undefined}

@@ -11,6 +11,7 @@ export interface UIState {
   selectedModel: string;
   availableProviders: string[];
   thinkingEnabled: boolean;
+  webSearchEnabled: boolean;
 }
 
 export type UIAction =
@@ -21,7 +22,8 @@ export type UIAction =
   | { type: "SET_AVAILABLE_PROVIDERS"; payload: string[] }
   | { type: "TOGGLE_MINIMAP" }
   | { type: "TOGGLE_THINKING" }
-  | { type: "SET_THINKING_ENABLED"; payload: boolean };
+  | { type: "SET_THINKING_ENABLED"; payload: boolean }
+  | { type: "TOGGLE_WEB_SEARCH" };
 
 export interface UIContextValue {
   state: UIState;

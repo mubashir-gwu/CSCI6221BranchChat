@@ -13,6 +13,7 @@ const initialState: UIState = {
   selectedModel: "gpt-4o",
   availableProviders: [],
   thinkingEnabled: false,
+  webSearchEnabled: true,
 };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -44,6 +45,9 @@ function uiReducer(state: UIState, action: UIAction): UIState {
 
     case "SET_THINKING_ENABLED":
       return { ...state, thinkingEnabled: action.payload };
+
+    case "TOGGLE_WEB_SEARCH":
+      return { ...state, webSearchEnabled: !state.webSearchEnabled };
 
     default:
       return state;

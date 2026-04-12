@@ -53,6 +53,7 @@ export interface NodeResponse {
   provider: string | null;
   model: string | null;
   thinkingContent?: string | null;
+  citations?: { url: string; title: string }[];
   attachments?: { filename: string; mimeType: string; data: string; size: number }[];
   createdAt: string;
 }

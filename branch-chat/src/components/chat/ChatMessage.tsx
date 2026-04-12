@@ -12,6 +12,7 @@ import BranchIndicator from "./BranchIndicator";
 import BranchMenu from "./BranchMenu";
 import CopyMarkdownButton from "./CopyMarkdownButton";
 import ThinkingBlock from "./ThinkingBlock";
+import CitationList from "./CitationList";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import type { TreeNode } from "@/types/tree";
 
@@ -160,6 +161,11 @@ export default function ChatMessage({
             {node.content}
           </ReactMarkdown>
         </div>
+
+        {/* Citations */}
+        {!isUser && node.citations && Array.isArray(node.citations) && node.citations.length > 0 && (
+          <CitationList citations={node.citations} />
+        )}
 
         {/* Attachment previews */}
         {node.attachments && node.attachments.length > 0 && (

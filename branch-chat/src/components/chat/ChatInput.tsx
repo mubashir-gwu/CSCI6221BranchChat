@@ -6,6 +6,7 @@ import { SendIcon, SquareIcon } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import FileUploadArea, { FilePreviewChips } from "./FileUploadArea";
 import ThinkingToggle from "./ThinkingToggle";
+import WebSearchToggle from "./WebSearchToggle";
 import type { StreamingState } from "@/hooks/useStreamingChat";
 
 interface AttachmentData {
@@ -29,6 +30,8 @@ interface ChatInputProps {
   thinkingDisabled?: boolean;
   selectedModel?: string;
   onModelChange?: (provider: string, model: string) => void;
+  webSearchEnabled?: boolean;
+  onWebSearchToggle?: () => void;
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -59,6 +62,8 @@ export default function ChatInput({
   thinkingDisabled,
   selectedModel,
   onModelChange,
+  webSearchEnabled,
+  onWebSearchToggle,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -164,6 +169,12 @@ export default function ChatInput({
           onChange={handleModelChange}
           availableProviders={availableProviders}
         />
+        {onWebSearchToggle && (
+          <WebSearchToggle
+            enabled={webSearchEnabled ?? true}
+            onToggle={onWebSearchToggle}
+          />
+        )}
         {onThinkingToggle && (
           <ThinkingToggle
             enabled={thinkingEnabled ?? false}

@@ -25,6 +25,7 @@ function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
     provider: n.provider,
     model: n.model,
     ...(n.thinkingContent ? { thinkingContent: n.thinkingContent } : {}),
+    ...(n.citations?.length ? { citations: n.citations } : {}),
     ...(n.attachments?.length ? { attachments: n.attachments } : {}),
     createdAt: n.createdAt,
   };
@@ -155,6 +156,7 @@ export default function ChatPage() {
         model,
         ...(attachments?.length ? { attachments } : {}),
         thinkingEnabled: uiState.thinkingEnabled,
+        webSearchEnabled: uiState.webSearchEnabled,
       });
 
       // Remove optimistic node
@@ -209,7 +211,7 @@ export default function ChatPage() {
         });
       }
     },
-    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled]
+    [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled, uiState.webSearchEnabled]
   );
 
   const handleBranchNavigate = useCallback(
@@ -361,6 +363,8 @@ export default function ChatPage() {
           thinkingDisabled={thinkingDisabled}
           selectedModel={selectedModelConfig?.name}
           onModelChange={handleModelChange}
+          webSearchEnabled={uiState.webSearchEnabled}
+          onWebSearchToggle={() => uiDispatch({ type: "TOGGLE_WEB_SEARCH" })}
         />
       </div>
       <TreeSidebar

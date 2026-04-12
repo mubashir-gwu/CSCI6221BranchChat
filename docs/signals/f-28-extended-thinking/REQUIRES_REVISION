@@ -1,0 +1,12 @@
+1. **Stale closure on `uiState.thinkingEnabled` in `handleSend`**
+   - File: `src/app/(protected)/chat/[conversationId]/page.tsx`
+   - Issue: `handleSend` (line 129) uses `uiState.thinkingEnabled` at line 157, but `uiState.thinkingEnabled` is not included in the `useCallback` dependency array at line 212. This means if the user toggles thinking between renders without triggering other dependency changes, the stale value will be sent.
+   - Fix: Add `uiState.thinkingEnabled` to the dependency array of `handleSend`:
+     ```
+     [conversationId, state.activeNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled]
+     ```
+
+2. **Mock model `supportsThinking: false` prevents testing thinking flow**
+   - File: `src/constants/models.ts:27`
+   - Issue: `mock-model` has `supportsThinking: false`. The UIProvider auto-disables thinking when switching to mock, so the thinking UI toggle is always disabled for mock. The mock provider code handles thinking, but developers can never trigger it from the UI.
+   - Fix: Change mock model config to `supportsThinking: true, maxThinkingLevel: 'high'` so developers can test the full thinking flow end-to-end without API keys.

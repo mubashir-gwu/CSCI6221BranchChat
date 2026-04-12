@@ -140,7 +140,7 @@ branch-chat/
 │   │
 │   ├── components/
 │   │   ├── auth/          LoginForm.tsx, RegisterForm.tsx
-│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator, CopyMarkdownButton
+│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator, CopyMarkdownButton, ThinkingToggle, ThinkingBlock
 │   │   ├── tree/          TreeSidebar, TreeVisualization, TreeNode
 │   │   ├── sidebar/       ConversationList, ConversationItem
 │   │   ├── dashboard/     TokenUsageCard
@@ -460,6 +460,8 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **TreeVisualization** | `nodes`, `childrenMap`, `activeNodeId`, `onNodeClick`      | `<ReactFlow>` from `@xyflow/react`. Conditionally renders `<MiniMap>` based on `isMinimapVisible`. Minimap toggle as `<ControlButton>` in ReactFlow Controls toolbar (Map/MapMinus icon, outline style). Styles in globals.css. |
 | **TreeNode**          | `{ label, role, provider, isActive, hasMultipleChildren }` | Colored box. Provider dot. Active ring. No connection handles. Only assistant nodes are clickable. |
 | **ThemeToggle**       | none                                                       | Cycle button: light → dark → system (Sun/Moon/Monitor icons). Uses `useTheme()` from `next-themes`. |
+| **ThinkingToggle**    | `{ enabled, onToggle, disabled, modelName? }`              | Brain icon toggle. `opacity-50 pointer-events-none` when disabled. Tooltip "Not available for {modelName}". Icon-only on mobile, icon+label on desktop. |
+| **ThinkingBlock**     | `{ content, isStreaming? }`                                | Collapsible thinking display above assistant response. Default collapsed. Pulsing header when streaming. Plain text, muted styling, `border-l-2 border-muted pl-3`. |
 | **TokenUsageCard**    | none (fetches from `/api/token-usage` internally)          | Table/card showing per-provider token usage (input, output, total calls). |
 
 ---

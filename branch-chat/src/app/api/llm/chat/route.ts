@@ -68,6 +68,7 @@ function serializeNode(doc: any): NodeResponse {
     provider: doc.provider ?? null,
     model: doc.model ?? null,
     ...(doc.thinkingContent ? { thinkingContent: doc.thinkingContent } : {}),
+    ...(doc.citations?.length ? { citations: doc.citations } : {}),
     ...(doc.attachments?.length ? { attachments: doc.attachments } : {}),
     createdAt: doc.createdAt.toISOString(),
   };
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
-    const { conversationId, parentNodeId, content, provider, model, attachments, thinkingEnabled } = body;
+    const { conversationId, parentNodeId, content, provider, model, attachments, thinkingEnabled, webSearchEnabled } = body;
 
     // Auth check
     const session = await auth();
@@ -225,6 +226,7 @@ export async function POST(request: Request) {
     const llmOptions: LLMRequestOptions = {
       thinkingEnabled: thinkingEnabled && modelDef.supportsThinking,
       thinkingLevel: modelDef.maxThinkingLevel ?? undefined,
+      webSearchEnabled: webSearchEnabled ?? false,
     };
 
     // Start streaming — nodes are saved to DB only on successful completion
@@ -280,6 +282,7 @@ export async function POST(request: Request) {
                 provider,
                 model,
                 thinkingContent: chunk.thinkingContent || null,
+                ...(chunk.citations?.length ? { citations: chunk.citations } : {}),
               });
 
               // Set rootNodeId if first message
@@ -296,6 +299,7 @@ export async function POST(request: Request) {
                       inputTokens: chunk.inputTokens ?? 0,
                       outputTokens: chunk.outputTokens ?? 0,
                       callCount: 1,
+                      webSearchRequests: chunk.webSearchRequestCount ?? 0,
                     },
                     $set: { provider },
                   },

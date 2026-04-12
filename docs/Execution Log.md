@@ -1229,3 +1229,25 @@ Updated the Gemini model entry in:
 - Changed MODELS type from `as const` object to `Record<string, readonly ModelConfig[]>` for proper typing
 - Updated CLAUDE.md with Feature Set 3 reference documents and models config documentation
 - Build passes
+
+## F-26: Provider Interface Extension
+
+**Status:** Complete  
+**Date:** 2026-04-12
+
+### T-124: Extend Provider Types with LLMRequestOptions, Citation, and Updated StreamChunk/LLMResponse
+- Added `LLMRequestOptions` interface (`webSearchEnabled`, `thinkingEnabled`, `thinkingLevel`) to `src/lib/providers/types.ts`
+- Added `Citation` interface (`url`, `title`) to `src/lib/providers/types.ts`
+- Extended `LLMResponse` with `thinkingContent`, `webSearchRequestCount`, `citations`
+- Added `thinking` variant to `StreamChunk`, extended `done` variant with new fields
+- Added `options?: LLMRequestOptions` to `LLMProvider.sendMessage` and `streamMessage`
+- Updated `src/types/database.ts` (DBNode: `thinkingContent`, `citations`)
+- Updated `src/types/api.ts` (LLMChatRequest: `webSearchEnabled`, `thinkingEnabled`)
+- Updated `src/types/export.ts` (exported node: `thinkingContent`, `citations`)
+
+### T-125: Update All Provider Method Signatures and Return Values
+- Updated all four providers (openai, anthropic, gemini, mock) to accept `options?: LLMRequestOptions`
+- Updated all `sendMessage` return values with `thinkingContent: null`, `webSearchRequestCount: 0`, `citations: []`
+- Updated all `streamMessage` `done` chunks with the same defaults
+- No behavioral changes — all providers work exactly as before
+- Build passes, all 190 tests pass

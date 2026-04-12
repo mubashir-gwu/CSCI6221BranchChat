@@ -160,3 +160,27 @@
   fill: var(--background);
   opacity: 0.85;
 }
+
+/* Mobile swipeable panel layout */
+.panel-container {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  height: 100dvh;
+}
+
+.panel-item {
+  scroll-snap-align: start;
+  min-width: 100vw;
+  flex-shrink: 0;
+}
+
+/* Hide scrollbar for panel container */
+.panel-container::-webkit-scrollbar {
+  display: none;
+}
+.panel-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

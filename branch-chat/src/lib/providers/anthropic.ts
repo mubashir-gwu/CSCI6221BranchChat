@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
+import { MODELS } from '@/constants/models';
 
 type AnthropicMessage = Anthropic.MessageCreateParams['messages'][number];
 
@@ -47,6 +48,41 @@ function buildSystemParam(systemText: string) {
   return { system: [{ type: 'text' as const, text: systemText, cache_control: { type: 'ephemeral' as const } }] };
 }
 
+function buildThinkingParams(model: string, options?: LLMRequestOptions): Record<string, unknown> {
+  if (!options?.thinkingEnabled) return {};
+
+  const modelConfig = MODELS.anthropic?.find((m) => m.id === model);
+  const level = modelConfig?.maxThinkingLevel ?? options.thinkingLevel ?? 'high';
+
+  if (level === 'max') {
+    return {
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'max' },
+      temperature: 1,
+      max_tokens: 16384,
+    };
+  }
+
+  return {
+    thinking: { type: 'enabled', budget_tokens: 10000 },
+    temperature: 1,
+    max_tokens: 16384,
+  };
+}
+
+function extractThinkingAndText(content: Anthropic.ContentBlock[]): { thinking: string; text: string } {
+  let thinking = '';
+  let text = '';
+  for (const block of content) {
+    if (block.type === 'thinking' && 'thinking' in block) {
+      thinking += (block as any).thinking;
+    } else if (block.type === 'text') {
+      text += block.text;
+    }
+  }
+  return { thinking, text };
+}
+
 export const anthropicProvider: LLMProvider = {
   name: 'anthropic',
 
@@ -62,19 +98,21 @@ export const anthropicProvider: LLMProvider = {
 
     const systemText = systemMessages.map((m) => m.content).join('\n');
 
+    const thinkingParams = buildThinkingParams(model, options);
+
     const response = await client.messages.create({
       model,
       max_tokens: 4096,
       ...buildSystemParam(systemText),
       messages: buildAnthropicMessages(nonSystemMessages),
-    });
+      ...thinkingParams,
+    } as any);
 
-    const firstBlock = response.content[0];
-    const content = firstBlock.type === 'text' ? firstBlock.text : '';
+    const { thinking, text } = extractThinkingAndText(response.content);
 
     return {
-      content,
-      thinkingContent: null,
+      content: text,
+      thinkingContent: thinking || null,
       provider: 'anthropic',
       model,
       inputTokens: response.usage.input_tokens,
@@ -96,27 +134,37 @@ export const anthropicProvider: LLMProvider = {
       const nonSystemMessages = messages.filter((m) => m.role !== 'system');
       const systemText = systemMessages.map((m) => m.content).join('\n');
 
+      const thinkingParams = buildThinkingParams(model, options);
+
       const stream = client.messages.stream({
         model,
         max_tokens: 4096,
         ...buildSystemParam(systemText),
         messages: buildAnthropicMessages(nonSystemMessages),
-      });
+        ...thinkingParams,
+      } as any);
+
+      let accumulatedThinking = '';
 
       for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          yield { type: 'token', content: event.delta.text };
+        if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'thinking_delta' && 'thinking' in event.delta) {
+            const thinkingText = (event.delta as any).thinking;
+            accumulatedThinking += thinkingText;
+            yield { type: 'thinking', content: thinkingText };
+          } else if (event.delta.type === 'text_delta') {
+            yield { type: 'token', content: event.delta.text };
+          }
         }
       }
 
       const finalMessage = await stream.finalMessage();
+      const { thinking, text } = extractThinkingAndText(finalMessage.content);
+
       yield {
         type: 'done',
-        content: finalMessage.content[0].type === 'text' ? finalMessage.content[0].text : '',
-        thinkingContent: null,
+        content: text,
+        thinkingContent: (accumulatedThinking || thinking) || null,
         inputTokens: finalMessage.usage.input_tokens,
         outputTokens: finalMessage.usage.output_tokens,
         webSearchRequestCount: 0,

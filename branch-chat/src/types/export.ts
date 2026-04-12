@@ -11,6 +11,8 @@ export interface ExportedTree {
     provider: string | null;
     model: string | null;
     attachments?: { filename: string; mimeType: string; data: string; size: number }[];
+    thinkingContent?: string | null;
+    citations?: { url: string; title: string }[];
     createdAt: string;
   }[];
 }

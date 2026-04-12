@@ -33,5 +33,7 @@ export interface DBNode {
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock' | null;
   model: string | null;
   attachments?: DBAttachment[];
+  thinkingContent?: string | null;
+  citations?: { url: string; title: string }[];
   createdAt: string;
 }

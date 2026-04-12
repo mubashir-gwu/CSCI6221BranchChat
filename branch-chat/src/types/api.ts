@@ -73,6 +73,8 @@ export interface LLMChatRequest {
   provider: 'openai' | 'anthropic' | 'gemini' | 'mock';
   model: string;
   attachments?: { filename: string; mimeType: string; data: string; size: number }[];
+  webSearchEnabled?: boolean;
+  thinkingEnabled?: boolean;
 }
 
 export interface LLMChatResponse {

@@ -311,6 +311,10 @@ export default function ChatPage() {
 
   const isStreaming = streamingState === 'streaming';
 
+  const handleModelChange = useCallback((provider: string, model: string) => {
+    uiDispatch({ type: "SET_SELECTED_MODEL", payload: { provider, model } });
+  }, [uiDispatch]);
+
   const selectedModelConfig = MODELS[uiState.selectedProvider as keyof typeof MODELS]?.find(
     (m) => m.id === uiState.selectedModel
   );
@@ -356,6 +360,7 @@ export default function ChatPage() {
           onThinkingToggle={() => uiDispatch({ type: "TOGGLE_THINKING" })}
           thinkingDisabled={thinkingDisabled}
           selectedModel={selectedModelConfig?.name}
+          onModelChange={handleModelChange}
         />
       </div>
       <TreeSidebar

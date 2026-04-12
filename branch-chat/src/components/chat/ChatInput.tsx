@@ -28,6 +28,7 @@ interface ChatInputProps {
   onThinkingToggle?: () => void;
   thinkingDisabled?: boolean;
   selectedModel?: string;
+  onModelChange?: (provider: string, model: string) => void;
 }
 
 function readFileAsBase64(file: File): Promise<string> {
@@ -57,6 +58,7 @@ export default function ChatInput({
   onThinkingToggle,
   thinkingDisabled,
   selectedModel,
+  onModelChange,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -74,6 +76,11 @@ export default function ChatInput({
       setMessage(restoredMessage);
     }
   }, [restoredMessage]);
+
+  const handleModelChange = useCallback((newSelection: { provider: string; model: string }) => {
+    setSelection(newSelection);
+    onModelChange?.(newSelection.provider, newSelection.model);
+  }, [onModelChange]);
 
   const isStreaming = streamingState === 'streaming';
   const isDisabled = disabled || isStreaming;
@@ -154,7 +161,7 @@ export default function ChatInput({
       <div className="mt-2 flex items-center gap-2">
         <ModelSelector
           value={selection}
-          onChange={setSelection}
+          onChange={handleModelChange}
           availableProviders={availableProviders}
         />
         {onThinkingToggle && (

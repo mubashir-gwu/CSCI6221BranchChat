@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
+import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk, Citation } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 import { MODELS } from '@/constants/models';
 
@@ -70,6 +70,33 @@ function buildThinkingParams(model: string, options?: LLMRequestOptions): Record
   };
 }
 
+function buildWebSearchTools(options?: LLMRequestOptions): Record<string, unknown> {
+  if (!options?.webSearchEnabled) return {};
+  return {
+    tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+  };
+}
+
+function extractCitations(content: any[]): Citation[] {
+  const seen = new Set<string>();
+  const citations: Citation[] = [];
+  for (const block of content) {
+    if (block.type === 'text' && Array.isArray(block.citations)) {
+      for (const c of block.citations) {
+        if (c.url && c.title && !seen.has(c.url)) {
+          seen.add(c.url);
+          citations.push({ url: c.url, title: c.title });
+        }
+      }
+    }
+  }
+  return citations;
+}
+
+function getWebSearchRequestCount(usage: any): number {
+  return usage?.server_tool_use?.web_search_requests ?? 0;
+}
+
 function extractThinkingAndText(content: Anthropic.ContentBlock[]): { thinking: string; text: string } {
   let thinking = '';
   let text = '';
@@ -99,6 +126,7 @@ export const anthropicProvider: LLMProvider = {
     const systemText = systemMessages.map((m) => m.content).join('\n');
 
     const thinkingParams = buildThinkingParams(model, options);
+    const webSearchTools = buildWebSearchTools(options);
 
     const response = await client.messages.create({
       model,
@@ -106,9 +134,12 @@ export const anthropicProvider: LLMProvider = {
       ...buildSystemParam(systemText),
       messages: buildAnthropicMessages(nonSystemMessages),
       ...thinkingParams,
+      ...webSearchTools,
     } as any);
 
     const { thinking, text } = extractThinkingAndText(response.content);
+    const citations = extractCitations(response.content as any[]);
+    const webSearchRequestCount = getWebSearchRequestCount(response.usage);
 
     return {
       content: text,
@@ -117,8 +148,8 @@ export const anthropicProvider: LLMProvider = {
       model,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
-      webSearchRequestCount: 0,
-      citations: [],
+      webSearchRequestCount,
+      citations,
     };
   },
 
@@ -135,6 +166,7 @@ export const anthropicProvider: LLMProvider = {
       const systemText = systemMessages.map((m) => m.content).join('\n');
 
       const thinkingParams = buildThinkingParams(model, options);
+      const webSearchTools = buildWebSearchTools(options);
 
       const stream = client.messages.stream({
         model,
@@ -142,6 +174,7 @@ export const anthropicProvider: LLMProvider = {
         ...buildSystemParam(systemText),
         messages: buildAnthropicMessages(nonSystemMessages),
         ...thinkingParams,
+        ...webSearchTools,
       } as any);
 
       let accumulatedThinking = '';
@@ -155,11 +188,14 @@ export const anthropicProvider: LLMProvider = {
           } else if (event.delta.type === 'text_delta') {
             yield { type: 'token', content: event.delta.text };
           }
+          // Ignore server_tool_use and web_search_tool_result deltas
         }
       }
 
       const finalMessage = await stream.finalMessage();
       const { thinking, text } = extractThinkingAndText(finalMessage.content);
+      const citations = extractCitations(finalMessage.content as any[]);
+      const webSearchRequestCount = getWebSearchRequestCount(finalMessage.usage);
 
       yield {
         type: 'done',
@@ -167,8 +203,8 @@ export const anthropicProvider: LLMProvider = {
         thinkingContent: (accumulatedThinking || thinking) || null,
         inputTokens: finalMessage.usage.input_tokens,
         outputTokens: finalMessage.usage.output_tokens,
-        webSearchRequestCount: 0,
-        citations: [],
+        webSearchRequestCount,
+        citations,
       };
     } catch (error: any) {
       yield { type: 'error', message: error?.message ?? 'Anthropic streaming error' };

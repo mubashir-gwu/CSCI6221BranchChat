@@ -108,7 +108,6 @@ branch-chat/
 │   │   │                                # @custom-variant dark (&:where(.dark, .dark *));
 │   │   │                                # @layer base { @import "@xyflow/react/dist/style.css"; }
 │   │   │                                # @theme inline { --color-*: ...; --radius-*: ...; }
-│   │   │                                # .panel-container / .panel-item: scroll-snap mobile layout (100dvh, hidden scrollbar)
 │   │   ├── layout.tsx                   # Root: AuthProvider + ThemeProvider + ToastProvider
 │   │   ├── page.tsx                     # Redirect → /login or /dashboard
 │   │   │
@@ -117,9 +116,9 @@ branch-chat/
 │   │   │   └── register/page.tsx
 │   │   │
 │   │   ├── (protected)/
-│   │   │   ├── layout.tsx               # ConversationProvider + UIProvider + sidebar (desktop only: hidden md:flex) + ThemeToggle
+│   │   │   ├── layout.tsx               # ConversationProvider + UIProvider + sidebar (full-screen overlay on mobile, inline on desktop) + ThemeToggle
 │   │   │   ├── dashboard/page.tsx
-│   │   │   ├── chat/[conversationId]/page.tsx  # Mobile: swipeable 3-panel layout (sidebar, chat, tree). Desktop: standard layout.
+│   │   │   ├── chat/[conversationId]/page.tsx
 │   │   │   └── usage/page.tsx           # Token usage per provider
 │   │   │
 │   │   └── api/
@@ -463,8 +462,11 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | **ThemeToggle**       | none                                                       | Cycle button: light → dark → system (Sun/Moon/Monitor icons). Uses `useTheme()` from `next-themes`. |
 | **ThinkingToggle**    | `{ enabled, onToggle, disabled, modelName? }`              | Brain icon toggle. `opacity-50 pointer-events-none` when disabled. Tooltip "Not available for {modelName}". Icon-only on mobile, icon+label on desktop. |
 | **ThinkingBlock**     | `{ content, isStreaming? }`                                | Collapsible thinking display above assistant response. Default collapsed. Pulsing header when streaming. Plain text, muted styling, `border-l-2 border-muted pl-3`. |
-| **PanelIndicator**    | `{ activeIndex: number; count: number }`                   | Dot indicators for mobile swipeable panel navigation. `w-2 h-2 rounded-full`, `bg-primary` active / `bg-muted` inactive. Hidden on desktop (`md:hidden`). |
 | **TokenUsageCard**    | none (fetches from `/api/token-usage` internally)          | Table/card showing per-provider token usage (input, output, total calls). |
+
+### Intentional Deviation: Mobile Layout (F-30)
+
+The Feature Set 3 docs (`Architecture Delta Document - Feature Set 3.md`, `Task Breakdown Document - Feature Set 3.md`) specify a CSS scroll-snap swipeable three-panel layout for mobile. This was implemented, audited, and then **intentionally replaced** with a simpler approach: on mobile, the conversation sidebar and tree sidebar render as full-screen overlays (`fixed inset-0 z-40`) toggled via the existing sidebar buttons. The chat page uses a single layout for all screen sizes. The `PanelIndicator` component and scroll-snap CSS were removed. The docs remain as historical records of the original design.
 
 ---
 

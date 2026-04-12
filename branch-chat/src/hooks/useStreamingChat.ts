@@ -11,6 +11,8 @@ interface StreamingChatRequest {
   provider: string;
   model: string;
   attachments?: { filename: string; mimeType: string; data: string; size: number }[];
+  thinkingEnabled?: boolean;
+  webSearchEnabled?: boolean;
 }
 
 interface DoneEventData {
@@ -27,11 +29,14 @@ export type StreamingResult =
 
 export function useStreamingChat() {
   const [streamingContent, setStreamingContent] = useState('');
+  const [streamingThinkingContent, setStreamingThinkingContent] = useState('');
   const [streamingState, setStreamingState] = useState<StreamingState>('idle');
   const [streamingError, setStreamingError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const contentRef = useRef('');
+  const thinkingContentRef = useRef('');
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thinkingFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -39,6 +44,9 @@ export function useStreamingChat() {
       abortControllerRef.current?.abort();
       if (flushTimerRef.current) {
         clearTimeout(flushTimerRef.current);
+      }
+      if (thinkingFlushTimerRef.current) {
+        clearTimeout(thinkingFlushTimerRef.current);
       }
     };
   }, []);
@@ -48,7 +56,9 @@ export function useStreamingChat() {
     abortControllerRef.current = null;
     setStreamingState('idle');
     setStreamingContent('');
+    setStreamingThinkingContent('');
     contentRef.current = '';
+    thinkingContentRef.current = '';
   }, []);
 
   const sendStreamingMessage = useCallback(async (
@@ -57,8 +67,10 @@ export function useStreamingChat() {
     // Reset state
     setStreamingState('streaming');
     setStreamingContent('');
+    setStreamingThinkingContent('');
     setStreamingError(null);
     contentRef.current = '';
+    thinkingContentRef.current = '';
 
     // Create abort controller
     const controller = new AbortController();
@@ -92,6 +104,7 @@ export function useStreamingChat() {
       let buffer = '';
       let doneData: DoneEventData | null = null;
       let needsFlush = false;
+      let needsThinkingFlush = false;
 
       const flushContent = () => {
         setStreamingContent(contentRef.current);
@@ -99,10 +112,23 @@ export function useStreamingChat() {
         flushTimerRef.current = null;
       };
 
+      const flushThinkingContent = () => {
+        setStreamingThinkingContent(thinkingContentRef.current);
+        needsThinkingFlush = false;
+        thinkingFlushTimerRef.current = null;
+      };
+
       const scheduleFlush = () => {
         if (!needsFlush) {
           needsFlush = true;
           flushTimerRef.current = setTimeout(flushContent, 50);
+        }
+      };
+
+      const scheduleThinkingFlush = () => {
+        if (!needsThinkingFlush) {
+          needsThinkingFlush = true;
+          thinkingFlushTimerRef.current = setTimeout(flushThinkingContent, 50);
         }
       };
 
@@ -144,13 +170,21 @@ export function useStreamingChat() {
           if (event === 'token') {
             contentRef.current += parsed.content;
             scheduleFlush();
+          } else if (event === 'thinking') {
+            thinkingContentRef.current += parsed.content;
+            scheduleThinkingFlush();
           } else if (event === 'done') {
             // Final flush
             if (flushTimerRef.current) {
               clearTimeout(flushTimerRef.current);
               flushTimerRef.current = null;
             }
+            if (thinkingFlushTimerRef.current) {
+              clearTimeout(thinkingFlushTimerRef.current);
+              thinkingFlushTimerRef.current = null;
+            }
             setStreamingContent(parsed.assistantNode?.content ?? contentRef.current);
+            setStreamingThinkingContent(parsed.assistantNode?.thinkingContent ?? thinkingContentRef.current);
             doneData = parsed;
             setStreamingState('idle');
           } else if (event === 'title') {
@@ -162,6 +196,10 @@ export function useStreamingChat() {
             if (flushTimerRef.current) {
               clearTimeout(flushTimerRef.current);
               flushTimerRef.current = null;
+            }
+            if (thinkingFlushTimerRef.current) {
+              clearTimeout(thinkingFlushTimerRef.current);
+              thinkingFlushTimerRef.current = null;
             }
             const streamErr = parsed.message ?? 'Stream error';
             setStreamingState('error');
@@ -184,6 +222,7 @@ export function useStreamingChat() {
       return { type: 'error', message: networkErr };
     } finally {
       contentRef.current = '';
+      thinkingContentRef.current = '';
       abortControllerRef.current = null;
     }
   }, []);
@@ -191,6 +230,7 @@ export function useStreamingChat() {
   return {
     sendStreamingMessage,
     streamingContent,
+    streamingThinkingContent,
     streamingState,
     streamingError,
     abortStream,

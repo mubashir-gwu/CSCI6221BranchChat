@@ -223,13 +223,20 @@ export default function ChatPage() {
     [childrenMap, dispatch]
   );
 
+  const [scrollToNodeId, setScrollToNodeId] = useState<string | null>(null);
+
   const handleTreeNodeClick = useCallback(
     (nodeId: string) => {
       dispatch({ type: "SET_ACTIVE_NODE", payload: nodeId });
       window.location.hash = nodeId;
+      setScrollToNodeId(nodeId);
     },
     [dispatch]
   );
+
+  const handleScrollComplete = useCallback(() => {
+    setScrollToNodeId(null);
+  }, []);
 
   const [previousActiveNodeId, setPreviousActiveNodeId] = useState<string | null>(null);
 
@@ -356,6 +363,8 @@ export default function ChatPage() {
       streamingContent={streamingContent}
       streamingThinkingContent={streamingThinkingContent}
       streamingState={streamingState}
+      scrollToNodeId={scrollToNodeId}
+      onScrollComplete={handleScrollComplete}
     />
   );
 

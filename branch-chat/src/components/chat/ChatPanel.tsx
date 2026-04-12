@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ChatMessage from "./ChatMessage";
 import ThinkingBlock from "./ThinkingBlock";
@@ -21,6 +21,8 @@ interface ChatPanelProps {
   streamingContent?: string;
   streamingThinkingContent?: string;
   streamingState?: StreamingState;
+  scrollToNodeId?: string | null;
+  onScrollComplete?: () => void;
 }
 
 export default function ChatPanel({
@@ -36,12 +38,48 @@ export default function ChatPanel({
   streamingContent,
   streamingThinkingContent,
   streamingState,
+  scrollToNodeId,
+  onScrollComplete,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const skipAutoScrollRef = useRef(false);
   const isStreaming = streamingState === 'streaming';
+
+  const setMessageRef = useCallback((nodeId: string, el: HTMLDivElement | null) => {
+    if (el) {
+      messageRefs.current.set(nodeId, el);
+    } else {
+      messageRefs.current.delete(nodeId);
+    }
+  }, []);
+
+  // Scroll to a specific node when requested from tree view click
+  useEffect(() => {
+    if (!scrollToNodeId) return;
+    const el = messageRefs.current.get(scrollToNodeId);
+    if (el) {
+      skipAutoScrollRef.current = true;
+      // Find the scroll viewport and scroll with an offset for visual breathing room
+      const viewport = el.closest('[data-slot="scroll-area-viewport"]');
+      if (viewport) {
+        const viewportRect = viewport.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const offset = elRect.top - viewportRect.top + viewport.scrollTop - 16;
+        viewport.scrollTo({ top: offset, behavior: "smooth" });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+    onScrollComplete?.();
+  }, [scrollToNodeId, activePath, onScrollComplete]);
 
   // Auto-scroll to bottom on new messages, loading state change, or streaming content
   useEffect(() => {
+    if (skipAutoScrollRef.current) {
+      skipAutoScrollRef.current = false;
+      return;
+    }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activePath.length, isLoading, streamingContent]);
 
@@ -64,8 +102,8 @@ export default function ChatPanel({
           const activeChildId =
             index < activePath.length - 1 ? activePath[index + 1].id : null;
           return (
+            <div key={node.id} ref={(el) => setMessageRef(node.id, el)}>
             <ChatMessage
-              key={node.id}
               node={node}
               childCount={childIds.length}
               childNodes={childNodes}
@@ -78,6 +116,7 @@ export default function ChatPanel({
               onGoBack={onGoBack}
               onDelete={onDeleteNode}
             />
+            </div>
           );
         })}
         {isStreaming && (streamingContent || streamingThinkingContent) ? (

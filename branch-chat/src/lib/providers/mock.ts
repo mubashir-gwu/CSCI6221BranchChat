@@ -1,5 +1,7 @@
 import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk } from './types';
 
+const MOCK_THINKING = 'Mock thinking: analyzing the request...\nConsidering multiple approaches...\nFormulating response...';
+
 const MOCK_RESPONSE = `## Mock Response
 
 This is a **mock response** for development.
@@ -40,7 +42,7 @@ export const mockProvider: LLMProvider = {
 
     return {
       content: responseContent,
-      thinkingContent: null,
+      thinkingContent: options?.thinkingEnabled ? MOCK_THINKING : null,
       provider: 'mock',
       model,
       inputTokens,
@@ -57,6 +59,12 @@ export const mockProvider: LLMProvider = {
   ): AsyncGenerator<StreamChunk> {
     const inputLength = _messages.reduce((sum, m) => sum + m.content.length, 0);
 
+    if (options?.thinkingEnabled) {
+      yield { type: 'thinking', content: 'Mock thinking: analyzing the request...' };
+      yield { type: 'thinking', content: '\nConsidering multiple approaches...' };
+      yield { type: 'thinking', content: '\nFormulating response...' };
+    }
+
     const prefix = getAttachmentPrefix(_messages);
     const responseContent = prefix + MOCK_RESPONSE;
 
@@ -68,7 +76,7 @@ export const mockProvider: LLMProvider = {
     yield {
       type: 'done',
       content: responseContent,
-      thinkingContent: null,
+      thinkingContent: options?.thinkingEnabled ? MOCK_THINKING : null,
       inputTokens: Math.ceil(inputLength / 4),
       outputTokens: Math.ceil(responseContent.length / 4),
       webSearchRequestCount: 0,

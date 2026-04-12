@@ -1,0 +1,5 @@
+Audit passed. All cycle 1 issues resolved. No new issues found.
+
+Verified fixes:
+1. Stale closure on uiState.thinkingEnabled — now in useCallback dependency array (page.tsx:212)
+2. Mock model supportsThinking — changed to true with maxThinkingLevel 'high' (models.ts:26)

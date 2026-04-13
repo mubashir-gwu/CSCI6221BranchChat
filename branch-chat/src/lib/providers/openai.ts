@@ -27,7 +27,7 @@ function buildInstructionsAndInput(messages: LLMMessage[]): {
       const contentParts: any[] = [];
       const attachmentBlocks = formatAttachmentsForProvider(m.attachments, 'openai');
       contentParts.push(...attachmentBlocks);
-      contentParts.push({ type: 'text', text: m.content });
+      contentParts.push({ type: 'input_text', text: m.content });
       input.push({ role: m.role, content: contentParts });
     } else {
       input.push({ role: m.role, content: m.content });

@@ -36,7 +36,7 @@ function formatForOpenAI(attachments: LLMAttachment[]): unknown[] {
   return attachments.map((att) => {
     if (isTextFile(att.mimeType)) {
       const text = decodeBase64ToText(att.data);
-      return { type: 'text', text: `[File: ${att.filename}]\n${text}` };
+      return { type: 'input_text', text: `[File: ${att.filename}]\n${text}` };
     }
     if (att.mimeType === 'application/pdf') {
       return {

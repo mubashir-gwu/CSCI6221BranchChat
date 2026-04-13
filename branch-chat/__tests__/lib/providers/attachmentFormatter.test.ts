@@ -102,7 +102,7 @@ describe("formatAttachmentsForProvider", () => {
     it("formats text files as inline text", () => {
       const result = formatAttachmentsForProvider([textAttachment], "openai") as any[];
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe("text");
+      expect(result[0].type).toBe("input_text");
       expect(result[0].text).toContain("[File: notes.txt]");
       expect(result[0].text).toContain(textContent);
     });

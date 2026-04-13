@@ -27,11 +27,10 @@ A chat interface that lets you branch conversations like a tree. Ask an AI a que
 ```bash
 cd branch-chat
 npm install
+docker run -d -p 27017:27017 --name branch-chat-mongo mongo:7
 cp .env.example .env.local   # add your API keys
 npm run dev                  # localhost:3000
 ```
-
-Requires a MongoDB instance. See [CLAUDE.md](CLAUDE.md) for full setup details.
 
 ## Documentation
 

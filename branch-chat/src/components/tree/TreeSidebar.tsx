@@ -75,8 +75,8 @@ export default function TreeSidebar({
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-card md:static md:z-auto md:h-full md:border-l"
-          style={{ width }}
+          className="fixed inset-0 w-full z-40 bg-card md:static md:w-auto md:z-auto md:h-full md:border-l"
+          style={{ '--tree-sidebar-width': `${width}px` } as React.CSSProperties}
         >
           {/* Desktop resize handle */}
           <div

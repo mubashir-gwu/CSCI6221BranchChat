@@ -160,3 +160,9 @@
   fill: var(--background);
   opacity: 0.85;
 }
+
+@media (min-width: 768px) {
+  [style*="--tree-sidebar-width"] {
+    width: var(--tree-sidebar-width);
+  }
+}

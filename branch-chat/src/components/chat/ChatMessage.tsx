@@ -254,31 +254,45 @@ function AttachmentPreview({
 
   if (attachment.mimeType.startsWith('image/')) {
     const dataUrl = `data:${attachment.mimeType};base64,${attachment.data}`;
+    const handleImageClick = () => {
+      const byteString = atob(attachment.data);
+      const bytes = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        bytes[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: attachment.mimeType });
+      window.open(URL.createObjectURL(blob), '_blank');
+    };
     return (
-      <a href={dataUrl} target="_blank" rel="noopener noreferrer">
-        <img
-          src={dataUrl}
-          alt={attachment.filename}
-          className="max-h-48 rounded border cursor-pointer"
-        />
-      </a>
+      <img
+        src={dataUrl}
+        alt={attachment.filename}
+        className="max-h-48 rounded border cursor-pointer"
+        onClick={handleImageClick}
+      />
     );
   }
 
   if (attachment.mimeType === 'application/pdf') {
-    const dataUrl = `data:application/pdf;base64,${attachment.data}`;
+    const handlePdfClick = () => {
+      const byteString = atob(attachment.data);
+      const bytes = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        bytes[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    };
     return (
-      <a
-        href={dataUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handlePdfClick}
         className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs hover:bg-muted/50 ${
           isUser ? 'border-primary-foreground/30 text-primary-foreground' : 'border-border'
         }`}
       >
         <FileText className="h-4 w-4 text-red-500" />
         <span className="max-w-[150px] truncate">{attachment.filename}</span>
-      </a>
+      </button>
     );
   }
 

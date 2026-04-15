@@ -18,7 +18,7 @@ export default function WebSearchToggle({
       size="sm"
       onClick={onToggle}
       className={`gap-1.5 ${
-        enabled ? "bg-primary/10 text-primary" : ""
+        enabled ? "bg-primary/10 dark:bg-primary/20 text-primary" : ""
       }`}
       aria-label={enabled ? "Disable web search" : "Enable web search"}
     >

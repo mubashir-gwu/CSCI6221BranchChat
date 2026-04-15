@@ -26,7 +26,7 @@ export default function ThinkingToggle({
           disabled
             ? "opacity-50 pointer-events-none"
             : enabled
-              ? "bg-primary/10 text-primary"
+              ? "bg-primary/10 dark:bg-primary/20 text-primary"
               : ""
         }`}
         aria-label={enabled ? "Disable thinking" : "Enable thinking"}

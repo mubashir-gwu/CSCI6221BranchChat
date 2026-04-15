@@ -159,6 +159,7 @@ export default function ChatPage() {
         content,
         provider: null,
         model: null,
+        ...(attachments?.length ? { attachments } : {}),
         createdAt: new Date().toISOString(),
       };
 

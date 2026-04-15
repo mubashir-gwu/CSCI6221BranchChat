@@ -41,9 +41,16 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
     const currentCount = files.length;
     const currentSize = getTotalSize(files);
 
+    const signature = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+    const seen = new Set(files.map(signature));
+
     const toAdd: File[] = [];
 
     for (const file of incoming) {
+      if (seen.has(signature(file))) {
+        toast.error(`Already attached: ${file.name}`);
+        continue;
+      }
       if (currentCount + toAdd.length >= MAX_FILES) {
         toast.error(`Maximum ${MAX_FILES} files per message`);
         break;
@@ -61,6 +68,7 @@ export default function FileUploadArea({ files, onFilesChange, disabled }: FileU
         break;
       }
       toAdd.push(file);
+      seen.add(signature(file));
     }
 
     if (toAdd.length > 0) {

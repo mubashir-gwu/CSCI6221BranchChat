@@ -15,7 +15,7 @@ import type { LLMMessage, LLMRequestOptions, StreamChunk } from "@/lib/providers
 import type { NodeResponse } from "@/types/api";
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 async function generateTitle(
   conversationId: string,
@@ -345,7 +345,7 @@ export async function POST(request: Request) {
                 }
               }
             } else if (chunk.type === 'error') {
-              // Provider error — nothing saved to DB, just report
+              logger.error("LLM provider error", { context: { requestId, conversationId, userId }, provider, model, error: chunk.message });
               controller.enqueue(
                 encoder.encode(encodeSSEEvent('error', {
                   message: chunk.message,

@@ -194,7 +194,9 @@ export const geminiProvider: LLMProvider = {
         citations,
       };
     } catch (error: any) {
-      yield { type: 'error', message: error?.message ?? 'Gemini streaming error' };
+      const causeMsg = error?.cause?.message ?? error?.cause?.code ?? error?.cause;
+      const detail = causeMsg ? `${error?.message ?? 'Gemini streaming error'} (cause: ${causeMsg})` : (error?.message ?? 'Gemini streaming error');
+      yield { type: 'error', message: detail };
     }
   },
 };

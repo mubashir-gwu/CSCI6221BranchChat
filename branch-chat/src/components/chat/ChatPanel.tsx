@@ -17,6 +17,7 @@ interface ChatPanelProps {
   onBranchFromHere?: (nodeId: string) => void;
   onGoBack?: () => void;
   onDeleteNode?: (nodeId: string) => void;
+  onExport?: (fromNodeId: string | null) => void;
   isLoading: boolean;
   streamingContent?: string;
   streamingThinkingContent?: string;
@@ -35,6 +36,7 @@ export default function ChatPanel({
   onBranchFromHere,
   onGoBack,
   onDeleteNode,
+  onExport,
   isLoading,
   streamingContent,
   streamingThinkingContent,
@@ -156,6 +158,7 @@ export default function ChatPanel({
               onBranchFromHere={onBranchFromHere}
               onGoBack={onGoBack}
               onDelete={onDeleteNode}
+              onExport={onExport}
             />
             </div>
           );

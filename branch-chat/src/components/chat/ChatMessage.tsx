@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Trash2Icon, FileText, ChevronDown, ChevronRight, GitBranchPlus, Undo2 } from "lucide-react";
+import { Trash2Icon, FileText, ChevronDown, ChevronRight, GitBranchPlus, Undo2, Download } from "lucide-react";
 import { PROVIDERS } from "@/constants/providers";
 import { Badge } from "@/components/ui/badge";
 import BranchIndicator from "./BranchIndicator";
@@ -14,6 +14,15 @@ import CopyMarkdownButton from "./CopyMarkdownButton";
 import ThinkingBlock from "./ThinkingBlock";
 import CitationList from "./CitationList";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { TreeNode } from "@/types/tree";
 
 interface ChatMessageProps {
@@ -28,6 +37,7 @@ interface ChatMessageProps {
   onBranchFromHere?: (nodeId: string) => void;
   onGoBack?: () => void;
   onDelete?: (nodeId: string) => void;
+  onExport?: (fromNodeId: string | null) => void;
   streamingThinkingContent?: string;
 }
 
@@ -43,10 +53,12 @@ export default function ChatMessage({
   onBranchFromHere,
   onGoBack,
   onDelete,
+  onExport,
   streamingThinkingContent,
 }: ChatMessageProps) {
   const [showBranchMenu, setShowBranchMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isUser = node.role === "user";
@@ -67,16 +79,28 @@ export default function ChatMessage({
   }, [showBranchMenu]);
 
   const actionButtons = (
-    <div className="hidden flex-col items-center gap-1 group-hover:flex">
-      <CopyMarkdownButton content={node.content} />
-      {onDelete && isUser && (
+    <div className="hidden flex-col items-end gap-2 pt-1 group-hover:flex">
+      <div className="flex items-center gap-2">
+        {onDelete && isUser && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-red-400/70 transition-colors hover:text-red-500"
+            title="Delete message and replies"
+            aria-label="Delete message and replies"
+          >
+            <Trash2Icon className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <CopyMarkdownButton content={node.content} />
+      </div>
+      {onExport && (
         <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="text-red-400/70 transition-colors hover:text-red-500"
-          title="Delete message and replies"
-          aria-label="Delete message and replies"
+          onClick={() => setShowExportDialog(true)}
+          className="text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+          title="Export"
+          aria-label="Export"
         >
-          <Trash2Icon className="h-3.5 w-3.5" />
+          <Download className="h-3.5 w-3.5" />
         </button>
       )}
     </div>
@@ -238,6 +262,39 @@ export default function ChatMessage({
           destructive
           onConfirm={() => onDelete(node.id)}
         />
+      )}
+
+      {/* Export choice dialog */}
+      {onExport && (
+        <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Export conversation</DialogTitle>
+              <DialogDescription>
+                Choose what to include in the exported JSON.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowExportDialog(false);
+                  onExport(node.id);
+                }}
+              >
+                Up to this message
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowExportDialog(false);
+                  onExport(null);
+                }}
+              >
+                Entire tree
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

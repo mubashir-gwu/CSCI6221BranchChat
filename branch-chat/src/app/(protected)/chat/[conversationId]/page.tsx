@@ -318,9 +318,12 @@ export default function ChatPage() {
     uiDispatch({ type: "TOGGLE_TREE" });
   }, [uiDispatch]);
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(async (fromNodeId: string | null = null) => {
     try {
-      const res = await fetch(`/api/conversations/${conversationId}/export`);
+      const fetchUrl = fromNodeId
+        ? `/api/conversations/${conversationId}/export?fromNodeId=${encodeURIComponent(fromNodeId)}`
+        : `/api/conversations/${conversationId}/export`;
+      const res = await fetch(fetchUrl);
       if (!res.ok) {
         toast.error("Failed to export conversation");
         return;
@@ -419,6 +422,7 @@ export default function ChatPage() {
       onBranchFromHere={handleBranchFromHere}
       onGoBack={previousActiveNodeId ? handleGoBack : undefined}
       onDeleteNode={handleDeleteNode}
+      onExport={handleExport}
       isLoading={uiState.isLoading}
       streamingContent={streamingContent}
       streamingThinkingContent={streamingThinkingContent}
@@ -436,7 +440,7 @@ export default function ChatPage() {
           <h2 className="text-sm font-semibold truncate">
             {conversation?.title ?? "Chat"}
           </h2>
-          <Button size="sm" variant="outline" onClick={handleExport}>
+          <Button size="sm" variant="outline" onClick={() => handleExport()}>
             Export
           </Button>
         </div>

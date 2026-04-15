@@ -298,7 +298,7 @@ Response: SSE stream (text/event-stream). Events: token, thinking, done, title, 
 
 **Orphaned node cleanup:** On LLM failure, delete the user node and reset `rootNodeId` if it was the first message.
 
-**GET `/api/conversations/[id]/export`** → JSON download. `{ version: 1, exportedAt, title, nodes[] }` with computed `childrenIds`.
+**GET `/api/conversations/[id]/export`** → JSON download. `{ version: 1, exportedAt, title, nodes[] }` with computed `childrenIds`. Optional `?fromNodeId=<id>` query param restricts the export to the path from that node up to the root (linear chain, no siblings or descendants); filename suffix becomes `-branch.json`. 404 if `fromNodeId` doesn't belong to the conversation.
 
 **POST `/api/import`** → `{ jsonData }` → `201 { conversationId, title, nodeCount }`. Validates tree integrity. If imported conversation's `defaultProvider` is unavailable, fall back to first available provider.
 
@@ -467,7 +467,7 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | Component             | Props                                                      | Behavior                                                        |
 | --------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
 | **ChatPanel**         | `activePath[]`, `onBranchNavigate`, `scrollToNodeId?`, `onScrollComplete?`, `onVisibleNodeChange?` | Maps → ChatMessage. Auto-scroll to bottom on new messages. Scroll-to-node on tree click (with 16px offset). Reports topmost visible node via scroll listener for tree highlight sync. LoadingIndicator. |
-| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. Renders `node.attachments[]` as a row of `AttachmentPreview` chips below the content. |
+| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`, `onExport?` | react-markdown. Provider color. BranchIndicator if >1 children. Hover-revealed action column: top row has Delete (user messages only, muted red `text-red-400/70`) + CopyMarkdownButton; second row has an Export button (Download icon) that opens a dialog offering "Entire tree" or "Up to this message" — the latter calls `onExport(node.id)` which hits `/api/conversations/[id]/export?fromNodeId=...`. Renders `node.attachments[]` as a row of `AttachmentPreview` chips below the content. |
 | **FileUploadArea**    | `files: File[]`, `onFilesChange`, `disabled`               | Paperclip button + hidden `<input type="file" multiple>` + drag-and-drop wrapper. Validates per-call (allowed types, ≤5MB/file, ≤10MB total, ≤5 files) and dedupes incoming files by `name\|size\|lastModified` against the current `files`. Toasts on rejection. Exports a sibling `FilePreviewChips` for rendering pending attachments with a remove button. |
 | **AttachmentPreview** | `attachment: Attachment`, `isUser: boolean`                | Inline chip rendered inside a chat message. Images shown as base64 data-URL thumbnails; PDFs as a labeled file icon; text files as a file icon with name. |
 | **WebSearchToggle**   | `{ enabled, onToggle, disabled, modelName? }`              | Globe icon toggle. Same icon-only-on-mobile pattern as ThinkingToggle. Disabled with tooltip when the model doesn't support web search. |

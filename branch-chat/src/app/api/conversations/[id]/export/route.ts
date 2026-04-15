@@ -24,6 +24,7 @@ export async function GET(
   }
 
   const { id } = await params;
+  const fromNodeId = _request.nextUrl.searchParams.get("fromNodeId");
 
   try {
     await connectDB();
@@ -37,15 +38,35 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const nodes = await Node.find({ conversationId: id }).lean();
+    const allNodes = await Node.find({ conversationId: id }).lean();
 
-    // Build childrenMap to compute childrenIds
+    let exportNodes = allNodes;
+    if (fromNodeId) {
+      const byId = new Map<string, (typeof allNodes)[number]>();
+      for (const n of allNodes) byId.set(n._id.toString(), n);
+      if (!byId.has(fromNodeId)) {
+        return NextResponse.json({ error: "Node not found" }, { status: 404 });
+      }
+      const pathIds = new Set<string>();
+      let cursorId: string | null = fromNodeId;
+      while (cursorId) {
+        if (pathIds.has(cursorId)) break;
+        pathIds.add(cursorId);
+        const n = byId.get(cursorId);
+        cursorId = n?.parentId ? n.parentId.toString() : null;
+      }
+      exportNodes = allNodes.filter((n) => pathIds.has(n._id.toString()));
+    }
+
+    // Build childrenMap restricted to exported nodes
+    const includedIds = new Set(exportNodes.map((n) => n._id.toString()));
     const childrenMap = new Map<string, string[]>();
-    for (const node of nodes) {
+    for (const node of exportNodes) {
       const nodeId = node._id.toString();
       if (!childrenMap.has(nodeId)) childrenMap.set(nodeId, []);
       if (node.parentId !== null) {
         const parentId = node.parentId.toString();
+        if (!includedIds.has(parentId)) continue;
         if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
         childrenMap.get(parentId)!.push(nodeId);
       }
@@ -55,7 +76,7 @@ export async function GET(
       version: 1,
       exportedAt: new Date().toISOString(),
       title: conversation.title,
-      nodes: nodes.map((n: any) => ({
+      nodes: exportNodes.map((n: any) => ({
         id: n._id.toString(),
         parentId: n.parentId?.toString() || null,
         childrenIds: childrenMap.get(n._id.toString()) || [],
@@ -70,9 +91,10 @@ export async function GET(
       })),
     };
 
-    const filename = `${conversation.title.replace(/[^a-zA-Z0-9-_ ]/g, "").replace(/\s+/g, "-")}.json`;
+    const baseName = conversation.title.replace(/[^a-zA-Z0-9-_ ]/g, "").replace(/\s+/g, "-");
+    const filename = fromNodeId ? `${baseName}-branch.json` : `${baseName}.json`;
 
-    logger.info("Route completed", { context: { route, method: "GET", userId: session.user.id, requestId, conversationId: id }, status: 200, nodeCount: nodes.length, durationMs: Date.now() - start });
+    logger.info("Route completed", { context: { route, method: "GET", userId: session.user.id, requestId, conversationId: id }, status: 200, nodeCount: exportNodes.length, durationMs: Date.now() - start });
     return new NextResponse(JSON.stringify(exportedTree, null, 2), {
       status: 200,
       headers: {

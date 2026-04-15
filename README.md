@@ -14,13 +14,13 @@ A chat interface that lets you branch conversations like a tree. Ask an AI a que
 
 - **Streaming responses.** Responses stream in token by token as the model generates them, so you don't have to wait for the full reply before you start reading.
 
-- **Extended thinking.** For models that support it (Claude's Sonnet/Opus and OpenAI's o-series), you can enable a thinking mode that shows the model's internal reasoning in a collapsible block above the response. You can toggle this on and off per message.
+- **Extended thinking.** Enable a thinking mode on any supported model to see its internal reasoning in a collapsible block above the response. You can toggle this on and off per message.
 
 - **Web search.** Enable web search on any message to let the model pull in live information. Cited sources show up as clickable links in the response. Available for all three providers.
 
 - **Dark mode.** Light, dark, and system themes. Switch between them with a single button in the header.
 
-- **Export and import.** Save any conversation as a JSON file and re-import it later. The export includes the full tree structure, so branches are preserved.
+- **Export and import.** Save any conversation as a JSON file and re-import it later. Export the entire tree, or export just the branch from root up to a specific message. The full-tree export preserves all branches.
 
 ## Setup
 

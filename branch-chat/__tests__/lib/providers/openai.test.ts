@@ -51,25 +51,30 @@ describe('OpenAI Provider — Responses API', () => {
     return mod.openaiProvider;
   }
 
-  describe('isReasoningModel', () => {
+  describe('isTemperatureSensitiveModel', () => {
     it('returns true for o3', async () => {
-      const { isReasoningModel } = await import('@/lib/providers/openai');
-      expect(isReasoningModel('o3')).toBe(true);
+      const { isTemperatureSensitiveModel } = await import('@/lib/providers/openai');
+      expect(isTemperatureSensitiveModel('o3')).toBe(true);
     });
 
     it('returns true for o4-mini', async () => {
-      const { isReasoningModel } = await import('@/lib/providers/openai');
-      expect(isReasoningModel('o4-mini')).toBe(true);
+      const { isTemperatureSensitiveModel } = await import('@/lib/providers/openai');
+      expect(isTemperatureSensitiveModel('o4-mini')).toBe(true);
+    });
+
+    it('returns true for gpt-5.4', async () => {
+      const { isTemperatureSensitiveModel } = await import('@/lib/providers/openai');
+      expect(isTemperatureSensitiveModel('gpt-5.4')).toBe(true);
     });
 
     it('returns false for gpt-4o', async () => {
-      const { isReasoningModel } = await import('@/lib/providers/openai');
-      expect(isReasoningModel('gpt-4o')).toBe(false);
+      const { isTemperatureSensitiveModel } = await import('@/lib/providers/openai');
+      expect(isTemperatureSensitiveModel('gpt-4o')).toBe(false);
     });
 
     it('returns false for gpt-4o-mini', async () => {
-      const { isReasoningModel } = await import('@/lib/providers/openai');
-      expect(isReasoningModel('gpt-4o-mini')).toBe(false);
+      const { isTemperatureSensitiveModel } = await import('@/lib/providers/openai');
+      expect(isTemperatureSensitiveModel('gpt-4o-mini')).toBe(false);
     });
   });
 

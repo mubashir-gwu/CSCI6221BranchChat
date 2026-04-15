@@ -3,11 +3,11 @@ import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChu
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
 /**
- * Returns true for o-series reasoning models (o3, o4-mini, etc.).
- * These models do not support the temperature parameter.
+ * Returns true for models that reject the `temperature` param
+ * (o-series and gpt-5 family reasoning models).
  */
-export function isReasoningModel(modelId: string): boolean {
-  return /^o\d/.test(modelId);
+export function isTemperatureSensitiveModel(modelId: string): boolean {
+  return /^o\d/.test(modelId) || /^gpt-5/.test(modelId);
 }
 
 function buildInstructionsAndInput(messages: LLMMessage[]): {
@@ -82,10 +82,10 @@ export const openaiProvider: LLMProvider = {
     if (instructions) {
       params.instructions = instructions;
     }
-    if (!isReasoningModel(model)) {
+    if (!isTemperatureSensitiveModel(model)) {
       params.temperature = 1;
     }
-    if (options?.thinkingEnabled && isReasoningModel(model)) {
+    if (options?.thinkingEnabled) {
       params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
     }
     if (options?.webSearchEnabled) {
@@ -95,7 +95,7 @@ export const openaiProvider: LLMProvider = {
     const response = await client.responses.create(params as any);
 
     let thinkingContent: string | null = null;
-    if (options?.thinkingEnabled && isReasoningModel(model)) {
+    if (options?.thinkingEnabled) {
       const reasoningItems = (response.output ?? []).filter((item: any) => item.type === 'reasoning');
       const summaries = reasoningItems
         .flatMap((item: any) => item.summary ?? [])
@@ -139,10 +139,10 @@ export const openaiProvider: LLMProvider = {
       if (instructions) {
         params.instructions = instructions;
       }
-      if (!isReasoningModel(model)) {
+      if (!isTemperatureSensitiveModel(model)) {
         params.temperature = 1;
       }
-      if (options?.thinkingEnabled && isReasoningModel(model)) {
+      if (options?.thinkingEnabled) {
         params.reasoning = { effort: options.thinkingLevel ?? 'high', summary: 'auto' };
       }
       if (options?.webSearchEnabled) {

@@ -2,6 +2,13 @@ import { GoogleGenAI } from '@google/genai';
 import type { LLMProvider, LLMResponse, LLMMessage, LLMRequestOptions, StreamChunk, Citation } from './types';
 import { formatAttachmentsForProvider } from './attachmentFormatter';
 
+function buildThinkingConfig(model: string, level: string): Record<string, unknown> {
+  if (/^gemini-3/.test(model)) {
+    return { thinkingLevel: level, includeThoughts: true };
+  }
+  return { thinkingBudget: -1, includeThoughts: true };
+}
+
 function extractGeminiCitations(candidate: any): Citation[] {
   const chunks = candidate?.groundingMetadata?.groundingChunks;
   if (!Array.isArray(chunks)) return [];
@@ -60,10 +67,7 @@ export const geminiProvider: LLMProvider = {
       config.systemInstruction = systemInstruction;
     }
     if (options?.thinkingEnabled) {
-      config.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel ?? 'high',
-        includeThoughts: true,
-      };
+      config.thinkingConfig = buildThinkingConfig(model, options.thinkingLevel ?? 'high');
     }
     if (options?.webSearchEnabled) {
       config.tools = [{ googleSearch: {} }];
@@ -132,10 +136,7 @@ export const geminiProvider: LLMProvider = {
         config.systemInstruction = systemInstruction;
       }
       if (options?.thinkingEnabled) {
-        config.thinkingConfig = {
-          thinkingLevel: options.thinkingLevel ?? 'high',
-          includeThoughts: true,
-        };
+        config.thinkingConfig = buildThinkingConfig(model, options.thinkingLevel ?? 'high');
       }
       if (options?.webSearchEnabled) {
         config.tools = [{ googleSearch: {} }];

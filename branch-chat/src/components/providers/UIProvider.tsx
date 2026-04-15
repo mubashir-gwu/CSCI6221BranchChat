@@ -12,7 +12,7 @@ const initialState: UIState = {
   isTreeOpen: false,
   isMinimapVisible: false,
   selectedProvider: "openai",
-  selectedModel: "gpt-4o",
+  selectedModel: "gpt-5.4",
   availableProviders: [],
   thinkingEnabled: false,
   webSearchEnabled: true,

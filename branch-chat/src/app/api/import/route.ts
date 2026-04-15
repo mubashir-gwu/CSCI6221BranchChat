@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Determine default provider — fall back if unavailable
     let defaultProvider = "openai";
-    let defaultModel = "gpt-4o";
+    let defaultModel = "gpt-5.4";
 
     if (!isProviderAvailable(defaultProvider)) {
       const available = getAvailableProviders();

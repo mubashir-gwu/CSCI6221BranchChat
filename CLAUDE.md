@@ -140,7 +140,7 @@ branch-chat/
 │   │
 │   ├── components/
 │   │   ├── auth/          LoginForm.tsx, RegisterForm.tsx
-│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator, CopyMarkdownButton, ThinkingToggle, ThinkingBlock
+│   │   ├── chat/          ChatPanel, ChatMessage, ChatInput, BranchIndicator, BranchMenu, ModelSelector, LoadingIndicator, CopyMarkdownButton, ThinkingToggle, ThinkingBlock, WebSearchToggle, CitationList, FileUploadArea (+ FilePreviewChips), AttachmentPreview
 │   │   ├── tree/          TreeSidebar, TreeVisualization, TreeNode
 │   │   ├── sidebar/       ConversationList, ConversationItem
 │   │   ├── dashboard/     TokenUsageCard
@@ -160,6 +160,8 @@ branch-chat/
 │   │   └── providers/
 │   │       ├── index.ts, types.ts
 │   │       ├── availability.ts          # getAvailableProviders() — checks env vars
+│   │       ├── streamHelpers.ts         # encodeSSEEvent() — server-side SSE framing
+│   │       ├── attachmentFormatter.ts   # Per-provider attachment serialization (image/pdf/text)
 │   │       ├── openai.ts               # OpenAI SDK v6
 │   │       ├── anthropic.ts            # Anthropic SDK v0.80
 │   │       ├── gemini.ts              # @google/genai v1.47 (GoogleGenAI class)
@@ -206,6 +208,13 @@ interface IConversation {
 ### Nodes
 
 ```typescript
+interface Attachment {
+    filename: string;
+    mimeType: string;
+    data: string;   // base64
+    size: number;
+}
+
 interface INode {
     conversationId: ObjectId;
     parentId: ObjectId | null;
@@ -215,10 +224,12 @@ interface INode {
     model: string | null;
     thinkingContent?: string | null;
     citations?: { url: string; title: string }[];
+    attachments?: Attachment[];
     createdAt: Date;
 }
 // { timestamps: { createdAt: true, updatedAt: false } }.
 // Indexes: { conversationId: 1 }, { conversationId: 1, parentId: 1 }.
+// Attachment subdocs: { _id: false } — no per-attachment _id.
 ```
 
 Branching = insert node with `parentId` → branch point. No other nodes modified. `childrenIds` NOT stored — compute client-side.
@@ -268,8 +279,12 @@ All routes require auth unless PUBLIC. Return 401 if no session, 403 if wrong ow
 **POST `/api/llm/chat`** — `maxDuration = 60`
 
 ```
-Request:  { conversationId, parentNodeId, content, provider, model, webSearchEnabled?, thinkingEnabled? }
-201:      { userNode, assistantNode }
+Request:  { conversationId, parentNodeId, content, provider, model, webSearchEnabled?, thinkingEnabled?, attachments? }
+            attachments: [{ filename, mimeType, data: base64, size }]
+            Limits enforced client-side: ≤5 files, ≤5MB each, ≤10MB total.
+            Allowed types: image/{jpeg,png,gif,webp}, application/pdf, text/{plain,markdown,csv}.
+Response: SSE stream (text/event-stream). Events: token, thinking, done, title, error.
+          done payload: { userNode, assistantNode, tokenUsage }
 422:      "Provider [name] is not configured."
 429:      "Rate limited by [provider]."
 502:      "[provider] API error"
@@ -277,7 +292,9 @@ Request:  { conversationId, parentNodeId, content, provider, model, webSearchEna
 
 **Steps:** validate → verify ownership → check provider availability via `getAvailableProviders()` → load nodes → walk tree → truncate at 80% → format → insert user node → call LLM → insert assistant node → upsert TokenUsage (`$inc`) → fire-and-forget auto-title (if first message) → return both
 
-**Auto-title:** If `parentNodeId === null` and conversation title is `"New Conversation"`, fire-and-forget a `generateTitle()` call using the same provider. System prompt: "Generate a concise title (max 6 words) for a conversation that starts with this message. Reply with only the title, no quotes or punctuation." On success, `Conversation.findByIdAndUpdate(conversationId, { title })`. Log errors, don't surface them. Track tokens.
+**Auto-title:** If `parentNodeId === null` and conversation title is `"New Conversation"`, fire-and-forget a `generateTitle()` call using the same provider — kicked off in parallel with the node-save work, awaited only just before sending the trailing `title` SSE event so the client's `done` event isn't blocked by a second LLM roundtrip. System prompt: "Generate a concise title (max 6 words) for a conversation that starts with this message. Reply with only the title, no quotes or punctuation." On success, `Conversation.findByIdAndUpdate(conversationId, { title })`. Log errors, don't surface them. Track tokens. The title call always runs with `webSearchEnabled: false` and `thinkingEnabled: false`.
+
+**Attachments:** Stored inline on the user node as base64 in `attachments[]`. The route delegates per-provider serialization to `src/lib/providers/attachmentFormatter.ts` (image → image block, PDF → document block where supported, text → inline text with `[File: name]` prefix). Server trusts the client-side limits (5 files / 5MB each / 10MB total / allowed MIME types) — no separate server-side size guard, so any future external clients should re-validate.
 
 **Orphaned node cleanup:** On LLM failure, delete the user node and reset `rootNodeId` if it was the first message.
 
@@ -450,7 +467,11 @@ LOG_LEVEL=INFO                          # TRACE | DEBUG | INFO | WARN | ERROR
 | Component             | Props                                                      | Behavior                                                        |
 | --------------------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
 | **ChatPanel**         | `activePath[]`, `onBranchNavigate`, `scrollToNodeId?`, `onScrollComplete?`, `onVisibleNodeChange?` | Maps → ChatMessage. Auto-scroll to bottom on new messages. Scroll-to-node on tree click (with 16px offset). Reports topmost visible node via scroll listener for tree highlight sync. LoadingIndicator. |
-| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. |
+| **ChatMessage**       | `node`, `childCount`, `isActive`, `onBranchClick`          | react-markdown. Provider color. BranchIndicator if >1 children. Delete button only on user messages; muted red color (`text-red-400/70`). CopyMarkdownButton on all messages. Renders `node.attachments[]` as a row of `AttachmentPreview` chips below the content. |
+| **FileUploadArea**    | `files: File[]`, `onFilesChange`, `disabled`               | Paperclip button + hidden `<input type="file" multiple>` + drag-and-drop wrapper. Validates per-call (allowed types, ≤5MB/file, ≤10MB total, ≤5 files) and dedupes incoming files by `name\|size\|lastModified` against the current `files`. Toasts on rejection. Exports a sibling `FilePreviewChips` for rendering pending attachments with a remove button. |
+| **AttachmentPreview** | `attachment: Attachment`, `isUser: boolean`                | Inline chip rendered inside a chat message. Images shown as base64 data-URL thumbnails; PDFs as a labeled file icon; text files as a file icon with name. |
+| **WebSearchToggle**   | `{ enabled, onToggle, disabled, modelName? }`              | Globe icon toggle. Same icon-only-on-mobile pattern as ThinkingToggle. Disabled with tooltip when the model doesn't support web search. |
+| **CitationList**      | `{ citations: { url, title }[] }`                          | Numbered, linked list rendered under assistant messages that returned citations. |
 | **CopyMarkdownButton**| `{ content: string }`                                      | ClipboardCopy icon button. Copies raw markdown to clipboard. Swaps to Check icon for 2s. No toast. |
 | **ChatInput**         | `onSend`, `disabled`, `defaultProvider`, `defaultModel`    | Textarea + send + ModelSelector. Clears on send. Sticky bottom on mobile. Toggles (ThinkingToggle, WebSearchToggle) show icon-only on mobile, icon+label on desktop. `flex-wrap` on toggles row. |
 | **ModelSelector**     | `value`, `onChange`, `availableProviders`                  | shadcn DropdownMenu, provider-grouped, color-coded. Unavailable providers greyed out (`opacity-50 pointer-events-none`). |

@@ -265,6 +265,15 @@ export async function POST(request: Request) {
                 encoder.encode(encodeSSEEvent('thinking', { content: chunk.content }))
               );
             } else if (chunk.type === 'done') {
+              // Kick off auto-title in parallel with DB writes so the client's
+              // 'done' event isn't blocked by a second LLM roundtrip.
+              const titlePromise = conversation.title === "New Conversation"
+                ? generateTitle(conversationId, content.trim(), provider, model, userId).catch((titleErr: any) => {
+                    logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
+                    return null;
+                  })
+                : null;
+
               // Save both nodes to DB only on successful completion
               const userNode = await Node.create({
                 conversationId,
@@ -325,23 +334,14 @@ export async function POST(request: Request) {
                 }))
               );
 
-              // Auto-title: await and send via SSE so client gets it deterministically
-              if (conversation.title === "New Conversation") {
-                try {
-                  const generatedTitle = await generateTitle(
-                    conversationId,
-                    content.trim(),
-                    provider,
-                    model,
-                    userId
+              // Await the in-flight title promise (kicked off above, likely
+              // resolved by now) and send via SSE for deterministic delivery.
+              if (titlePromise) {
+                const generatedTitle = await titlePromise;
+                if (generatedTitle) {
+                  controller.enqueue(
+                    encoder.encode(encodeSSEEvent('title', { title: generatedTitle }))
                   );
-                  if (generatedTitle) {
-                    controller.enqueue(
-                      encoder.encode(encodeSSEEvent('title', { title: generatedTitle }))
-                    );
-                  }
-                } catch (titleErr: any) {
-                  logger.error("Auto-title: failed", { context: { conversationId }, error: titleErr?.message });
                 }
               }
             } else if (chunk.type === 'error') {

@@ -4,6 +4,13 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 export type StreamingState = 'idle' | 'streaming' | 'error';
 
+interface DoneEventData {
+  userNode: any;
+  assistantNode: any;
+  tokenUsage: { inputTokens: number; outputTokens: number };
+  generatedTitle?: string;
+}
+
 interface StreamingChatRequest {
   conversationId: string;
   parentNodeId: string | null;
@@ -13,13 +20,8 @@ interface StreamingChatRequest {
   attachments?: { filename: string; mimeType: string; data: string; size: number }[];
   thinkingEnabled?: boolean;
   webSearchEnabled?: boolean;
-}
-
-interface DoneEventData {
-  userNode: any;
-  assistantNode: any;
-  tokenUsage: { inputTokens: number; outputTokens: number };
-  generatedTitle?: string;
+  onDone?: (data: DoneEventData) => void;
+  onTitle?: (title: string) => void;
 }
 
 export type StreamingResult =
@@ -76,11 +78,18 @@ export function useStreamingChat() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    const { onDone, onTitle, ...fetchBody } = request;
+
+    // Hoisted so the catch block can see it on abort-after-done races
+    // (server still drains title after 'done'; user hitting Stop during that
+    // window should resolve as 'done' — the assistant message already landed).
+    let doneData: DoneEventData | null = null;
+
     try {
       const res = await fetch('/api/llm/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
+        body: JSON.stringify(fetchBody),
         signal: controller.signal,
       });
 
@@ -102,7 +111,6 @@ export function useStreamingChat() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let doneData: DoneEventData | null = null;
       let needsFlush = false;
       let needsThinkingFlush = false;
 
@@ -187,10 +195,18 @@ export function useStreamingChat() {
             setStreamingThinkingContent(parsed.assistantNode?.thinkingContent ?? thinkingContentRef.current);
             doneData = parsed;
             setStreamingState('idle');
+            // Fire onDone synchronously so caller can dispatch node updates
+            // in the same React batch as streamingState -> 'idle'. This avoids
+            // a render where the streaming bubble is gone but the real
+            // assistant node hasn't landed yet.
+            onDone?.(parsed);
           } else if (event === 'title') {
-            // Auto-generated title arrived — attach to done data
+            // Auto-generated title arrived — attach to done data and notify
             if (doneData) {
               doneData.generatedTitle = parsed.title;
+            }
+            if (parsed.title) {
+              onTitle?.(parsed.title);
             }
           } else if (event === 'error') {
             if (flushTimerRef.current) {
@@ -214,6 +230,11 @@ export function useStreamingChat() {
       if (err?.name === 'AbortError') {
         // Silent cleanup on user abort
         setStreamingState('idle');
+        // If 'done' already arrived, the operation succeeded — only the
+        // trailing title drain was aborted. Treat as success.
+        if (doneData) {
+          return { type: 'done', data: doneData };
+        }
         return { type: 'aborted' };
       }
       const networkErr = err?.message ?? 'Network error';
@@ -221,9 +242,15 @@ export function useStreamingChat() {
       setStreamingError(networkErr);
       return { type: 'error', message: networkErr };
     } finally {
-      contentRef.current = '';
-      thinkingContentRef.current = '';
-      abortControllerRef.current = null;
+      // Only clear shared refs if this call is still the active one.
+      // A concurrent call (user sending #2 while #1 is in the post-'done'
+      // title drain) may have already claimed these refs; clobbering them
+      // would wipe #2's in-progress state and orphan its abort controller.
+      if (abortControllerRef.current === controller) {
+        contentRef.current = '';
+        thinkingContentRef.current = '';
+        abortControllerRef.current = null;
+      }
     }
   }, []);
 

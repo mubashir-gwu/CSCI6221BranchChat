@@ -178,13 +178,36 @@ export default function ChatPage() {
         ...(attachments?.length ? { attachments } : {}),
         thinkingEnabled: uiState.thinkingEnabled,
         webSearchEnabled: uiState.webSearchEnabled,
+        // Apply node updates synchronously with streamingState -> 'idle'
+        // so React batches them and the streaming bubble hands off to the
+        // final assistant message without an intermediate blank frame.
+        onDone: (data) => {
+          const userNode = nodeResponseToTreeNode(data.userNode);
+          const assistantNode = nodeResponseToTreeNode(data.assistantNode);
+          dispatch({ type: "REMOVE_NODES", payload: [tempId] });
+          dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
+          dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
+          window.location.hash = assistantNode.id;
+          uiDispatch({
+            type: "SET_SELECTED_MODEL",
+            payload: { provider, model },
+          });
+        },
+        onTitle: (title) => {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              title,
+              updatedAt: new Date().toISOString(),
+            },
+          });
+        },
       });
 
-      // Remove optimistic node
-      dispatch({ type: "REMOVE_NODES", payload: [tempId] });
-
       if (result.type !== 'done') {
-        // Error or abort — restore the prompt so user can edit and resend
+        // Error or abort — remove the optimistic node and restore the prompt
+        dispatch({ type: "REMOVE_NODES", payload: [tempId] });
         dispatch({ type: "SET_ACTIVE_NODE", payload: sendParentId });
         setRestoredMessage(content);
 
@@ -204,32 +227,6 @@ export default function ChatPage() {
             });
           }
         }
-        return;
-      }
-
-      const userNode = nodeResponseToTreeNode(result.data.userNode);
-      const assistantNode = nodeResponseToTreeNode(result.data.assistantNode);
-
-      dispatch({ type: "ADD_NODES", payload: [userNode, assistantNode] });
-      dispatch({ type: "SET_ACTIVE_NODE", payload: assistantNode.id });
-      window.location.hash = assistantNode.id;
-
-      // Update selected model to match what was just used
-      uiDispatch({
-        type: "SET_SELECTED_MODEL",
-        payload: { provider, model },
-      });
-
-      // Update sidebar title if auto-title was generated
-      if (result.data.generatedTitle) {
-        dispatch({
-          type: "UPDATE_CONVERSATION",
-          payload: {
-            id: conversationId,
-            title: result.data.generatedTitle,
-            updatedAt: new Date().toISOString(),
-          },
-        });
       }
     },
     [conversationId, state.activeNodeId, pathEndNodeId, dispatch, uiDispatch, sendStreamingMessage, uiState.thinkingEnabled, uiState.webSearchEnabled]

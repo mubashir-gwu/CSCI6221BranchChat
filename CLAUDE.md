@@ -112,11 +112,13 @@ branch-chat/
 │   │   ├── page.tsx                     # Redirect → /login or /dashboard
 │   │   │
 │   │   ├── (auth)/
+│   │   │   ├── layout.tsx               # Wraps children in <BackendStatusGate>
 │   │   │   ├── login/page.tsx
 │   │   │   └── register/page.tsx
 │   │   │
 │   │   ├── (protected)/
 │   │   │   ├── layout.tsx               # ConversationProvider + UIProvider + sidebar (full-screen overlay on mobile, inline on desktop) + ThemeToggle
+│   │   │   ├── error.tsx                # Error boundary: auto-polls /api/health and reset()s on recovery
 │   │   │   ├── dashboard/page.tsx
 │   │   │   ├── chat/[conversationId]/page.tsx
 │   │   │   └── usage/page.tsx           # Token usage per provider
@@ -136,6 +138,7 @@ branch-chat/
 │   │       ├── llm/chat/route.ts             # POST: send + LLM response (maxDuration=60)
 │   │       ├── providers/route.ts            # GET: available providers based on env vars
 │   │       ├── token-usage/route.ts          # GET: token usage for current user
+│   │       ├── health/route.ts               # GET: live DB ping (unauthenticated)
 │   │       └── import/route.ts               # POST: import JSON
 │   │
 │   ├── components/
@@ -144,15 +147,16 @@ branch-chat/
 │   │   ├── tree/          TreeSidebar, TreeVisualization, TreeNode
 │   │   ├── sidebar/       ConversationList, ConversationItem
 │   │   ├── dashboard/     TokenUsageCard
-│   │   ├── common/        ConfirmDialog, ToastProvider (sonner), ThemeToggle
+│   │   ├── common/        ConfirmDialog, ToastProvider (sonner), ThemeToggle, BackendStatusGate
 │   │   └── providers/     AuthProvider, ConversationProvider, UIProvider
 │   │
 │   ├── contexts/          ConversationContext.ts, UIContext.ts
 │   ├── hooks/             useConversation, useUI, useTreeLayout, useActivePath
 │   │
 │   ├── lib/
-│   │   ├── auth.ts                      # NextAuth v5: exports { handlers, auth, signIn, signOut }
-│   │   ├── db.ts                        # Mongoose 9 connection singleton
+│   │   ├── auth.ts                      # NextAuth v5: exports { handlers, auth, signIn, signOut }. authorize() throws BackendUnavailableSignin (code="BackendUnavailable") when DB is down.
+│   │   ├── db.ts                        # Mongoose 9 connection singleton; BackendUnavailableError, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE
+│   │   ├── fetchClient.ts               # fetchOrThrowOnBackendDown() — wraps fetch; throws BackendUnavailableClientError on 503 BACKEND_UNAVAILABLE
 │   │   ├── logger.ts                    # Structured JSON file logger → logs/app.log
 │   │   ├── tree.ts                      # getPathToRoot, buildChildrenMap, findDescendants
 │   │   ├── tokenEstimator.ts            # 4 chars ≈ 1 token
@@ -256,7 +260,9 @@ interface ITokenUsage {
 
 ## API Contracts
 
-All routes require auth unless PUBLIC. Return 401 if no session, 403 if wrong owner.
+All routes require auth unless PUBLIC. Return 401 if no session, 403 if wrong owner. Any route returns 503 `{ error, code: "BACKEND_UNAVAILABLE" }` when `isBackendUnavailableError(err)` matches in its catch block — see "Backend-Unavailable Handling" below.
+
+**GET `/api/health`** — PUBLIC: `200 { ok: true }` on live DB ping (`db.admin().ping()` with 2s timeout). Otherwise 503 `BACKEND_UNAVAILABLE`. Not gated by middleware; polled by `BackendStatusGate` and `(protected)/error.tsx`.
 
 **POST `/api/auth/register`** — PUBLIC: `{ email, password }` → `201 { id, email }`
 
@@ -285,9 +291,11 @@ Request:  { conversationId, parentNodeId, content, provider, model, webSearchEna
             Allowed types: image/{jpeg,png,gif,webp}, application/pdf, text/{plain,markdown,csv}.
 Response: SSE stream (text/event-stream). Events: token, thinking, done, title, error.
           done payload: { userNode, assistantNode, tokenUsage }
+          error payload: { message, partial, code? } — code="BACKEND_UNAVAILABLE" if DB dies mid-stream
 422:      "Provider [name] is not configured."
 429:      "Rate limited by [provider]."
 502:      "[provider] API error"
+503:      { code: "BACKEND_UNAVAILABLE" } — pre-stream, if DB is down when the request arrives
 ```
 
 **Steps:** validate → verify ownership → check provider availability via `getAvailableProviders()` → load nodes → walk tree → truncate at 80% → format → insert user node → call LLM → insert assistant node → upsert TokenUsage (`$inc`) → fire-and-forget auto-title (if first message) → return both
@@ -438,11 +446,59 @@ No log rotation required (acceptable for course project scope). Manual cleanup a
 - next-auth 5.0.0-beta.30, JWT strategy, CredentialsProvider
 - bcryptjs 10 rounds
 - `src/lib/auth.ts` exports `{ handlers, auth, signIn, signOut }` from `NextAuth()`
-- `middleware.ts` protects all except `/login`, `/register`, `/api/auth/*`
-- Matcher paths: `'/dashboard'`, `'/chat/:path*'`, `'/usage'`
+- `middleware.ts` protects all except `/login`, `/register`, `/api/auth/*`, `/api/health`
+- Matcher paths: `'/dashboard'`, `'/chat/:path*'`, `'/usage'`, API routes for conversations/llm/providers/token-usage/import
 - Every API handler calls `auth()`, checks `session.user.id`
 - Every query filters by `userId`
 - `signIn` server action broken on Next.js 16 → use HTTP handlers only
+
+---
+
+## Backend-Unavailable Handling
+
+When MongoDB is unreachable, the app must tell the user (not silently render a blank page or show "invalid credentials") and auto-recover once the DB is back.
+
+### Detection — `src/lib/db.ts`
+
+- `BackendUnavailableError extends Error` (name = `"BackendUnavailableError"`). `connectDB()` catches any raw Mongoose connect error and rethrows as this typed error (preserving `cause`).
+- `isBackendUnavailableError(err)` returns true for: `instanceof BackendUnavailableError`, error names in `{ MongooseServerSelectionError, MongoServerSelectionError, MongoNetworkError, MongoNetworkTimeoutError }`, or messages matching `/ECONNREFUSED|ENOTFOUND/i`.
+- `connectDB()` uses `serverSelectionTimeoutMS: 2000` + `connectTimeoutMS: 2000` for fast-fail. A 3s failure-backoff short-circuits parallel retries. Cached connections with `mongoose.connection.readyState === 0` are cleared so mid-session drops produce a fresh attempt instead of reusing a dead socket.
+
+### API response convention
+
+- `BACKEND_UNAVAILABLE_RESPONSE` exports `{ body: { error, code: "BACKEND_UNAVAILABLE" }, status: 503 }`. Every API route's `catch` block checks `isBackendUnavailableError(err)` and returns this before the generic 500 branch.
+- SSE `/api/llm/chat` emits an `error` event with `code: "BACKEND_UNAVAILABLE"` if the DB dies mid-stream.
+- `GET /api/health` — PUBLIC (not in middleware matcher). Calls `connectDB()` then `db.admin().ping()` with a 2s timeout. Returns `{ ok: true }` on success or the standard 503 envelope on failure. Polled by the client-side gate every 3s.
+
+### Auth integration
+
+- `src/lib/auth.ts` wraps `authorize()` in try/catch. On backend-down it throws `BackendUnavailableSignin extends CredentialsSignin` with `code = "BackendUnavailable"`. NextAuth surfaces this as `result.code` on the client.
+- `LoginForm` checks `result.code === "BackendUnavailable"` (or regex-matches `result.error`) and shows "Backend services are unavailable. Please try again in a moment." instead of "Invalid email or password."
+- `RegisterForm` checks `res.status === 503 && data.code === "BACKEND_UNAVAILABLE"`.
+
+### Client plumbing — `src/lib/fetchClient.ts`
+
+- `fetchOrThrowOnBackendDown(input, init)` wraps fetch. On 503 with `code === "BACKEND_UNAVAILABLE"`, throws `BackendUnavailableClientError` (name = `"BackendUnavailableError"` to match server). Other 503s pass through as a reconstructed `Response` for the caller to read.
+- All client data-fetches use this helper. Exceptions: `/api/health` polling (reads `res.ok` directly as the signal) and the SSE `/api/llm/chat` request (reads `res.body` stream; pre-stream 503 surfaces `code` on the `StreamingResult.error` type).
+
+### UI surface
+
+- `BackendStatusGate` (`src/components/common/`) — two modes:
+  1. **Wrapper mode**: `<BackendStatusGate>{children}</BackendStatusGate>`. Probes `/api/health` on mount, shows a spinner while checking, then renders children on OK or the auto-polling error card on failure. Used by `(auth)/layout.tsx` so the login/register pages get the gate when the DB is down at app open.
+  2. **Recovery mode**: `<BackendStatusGate onRecover={fn} />`. Starts in "down" state, polls, calls `onRecover()` on recovery. Used inline by `ConversationProvider` and `UIProvider`.
+- `(protected)/error.tsx` — Next.js error boundary. When the thrown error has `name === "BackendUnavailableError"`, polls `/api/health` every 3s and calls `reset()` on recovery. Manual "Retry now" button + "Sign out" escape hatch.
+
+### Architectural rule — layouts must render, not throw
+
+Next.js error boundaries (`error.tsx`) **do not** catch errors thrown by a sibling layout or by components rendered inside that layout; those errors bubble to the root and show Next.js's default "This page couldn't load" fallback. Therefore:
+
+- **Pages and leaf components** (`dashboard/page.tsx`, `chat/[conversationId]/page.tsx`, `TokenUsageCard`) may `throw fatalError` during render on backend-down. The `(protected)/error.tsx` boundary catches it.
+- **Layouts and their providers** (`ConversationProvider`, `UIProvider`, sidebar `ConversationList`) must **not** throw. Providers render `<BackendStatusGate onRecover={...} />` inline in place of their children. Sidebar actions show a backend-down toast instead of throwing.
+
+### Flash prevention
+
+- `ConversationProvider` tracks `hasLoaded`; renders a full-screen spinner until the initial `/api/conversations` fetch resolves. Prevents blank-dashboard flash before the error card appears.
+- Chat page tracks `hasLoadedNodes`; gates the chat panel and input behind a spinner during the `reset()` → refetch window so no bubble/input flashes in the recovery transition.
 
 ---
 

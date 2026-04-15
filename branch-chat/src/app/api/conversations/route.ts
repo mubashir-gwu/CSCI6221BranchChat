@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from "@/lib/db";
 import { Conversation } from "@/models/Conversation";
 import { MODELS } from "@/constants/models";
 import { PROVIDERS } from "@/constants/providers";
@@ -41,6 +41,9 @@ export async function GET() {
     });
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "GET", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
@@ -116,6 +119,9 @@ export async function POST(request: Request) {
     );
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "POST", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

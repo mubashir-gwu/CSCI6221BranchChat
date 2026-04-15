@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from "@/lib/db";
 import { Conversation } from "@/models/Conversation";
 import { Node } from "@/models/Node";
 import { logger } from "@/lib/logger";
@@ -60,6 +60,9 @@ export async function PATCH(
     });
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "PATCH", userId: session.user.id, requestId, conversationId: id }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
@@ -104,6 +107,9 @@ export async function DELETE(
     return NextResponse.json({ deleted: true });
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "DELETE", userId: session.user.id, requestId, conversationId: id }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     if (error instanceof Error && error.name === "CastError") {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }

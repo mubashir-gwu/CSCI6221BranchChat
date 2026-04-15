@@ -1,12 +1,15 @@
 "use client";
 
-import { useReducer, useEffect, useMemo } from "react";
+import { useReducer, useEffect, useMemo, useState, useCallback } from "react";
+import { Loader2 } from "lucide-react";
 import {
   ConversationContext,
   ConversationState,
   ConversationAction,
 } from "@/contexts/ConversationContext";
 import type { TreeNode } from "@/types/tree";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
+import BackendStatusGate from "@/components/common/BackendStatusGate";
 
 const initialState: ConversationState = {
   conversations: [],
@@ -101,22 +104,54 @@ export default function ConversationProvider({
   children: React.ReactNode;
 }) {
   const [state, dispatch] = useReducer(conversationReducer, initialState);
+  const [backendDown, setBackendDown] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchConversations() {
       try {
-        const res = await fetch("/api/conversations");
-        if (!res.ok) return;
-        const data = await res.json();
-        dispatch({ type: "SET_CONVERSATIONS", payload: data.conversations });
-      } catch {
-        // Silently fail — conversations will be empty
+        const res = await fetchOrThrowOnBackendDown("/api/conversations");
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          dispatch({ type: "SET_CONVERSATIONS", payload: data.conversations });
+        }
+        setHasLoaded(true);
+      } catch (err) {
+        if (cancelled) return;
+        if ((err as Error)?.name === "BackendUnavailableError") {
+          setBackendDown(true);
+          return;
+        }
+        setHasLoaded(true);
       }
     }
     fetchConversations();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
+
+  const handleRecover = useCallback(() => {
+    setBackendDown(false);
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  if (backendDown) {
+    return <BackendStatusGate onRecover={handleRecover} />;
+  }
+
+  if (!hasLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <ConversationContext.Provider value={value}>

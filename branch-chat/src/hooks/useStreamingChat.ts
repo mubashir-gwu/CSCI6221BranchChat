@@ -26,7 +26,7 @@ interface StreamingChatRequest {
 
 export type StreamingResult =
   | { type: 'done'; data: DoneEventData }
-  | { type: 'error'; message: string }
+  | { type: 'error'; message: string; code?: string }
   | { type: 'aborted' };
 
 export function useStreamingChat() {
@@ -99,7 +99,7 @@ export function useStreamingChat() {
         const errorMsg = data.error ?? 'Request failed';
         setStreamingState('error');
         setStreamingError(errorMsg);
-        return { type: 'error', message: errorMsg };
+        return { type: 'error', message: errorMsg, code: data.code };
       }
 
       if (!res.body) {
@@ -220,7 +220,7 @@ export function useStreamingChat() {
             const streamErr = parsed.message ?? 'Stream error';
             setStreamingState('error');
             setStreamingError(streamErr);
-            return { type: 'error', message: streamErr };
+            return { type: 'error', message: streamErr, code: parsed.code };
           }
         }
       }

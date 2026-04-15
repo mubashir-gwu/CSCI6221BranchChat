@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { Types } from "mongoose";
 import { auth } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from "@/lib/db";
 import { validateTreeIntegrity } from "@/lib/tree";
 import { getAvailableProviders, isProviderAvailable } from "@/lib/providers/availability";
 import { Conversation } from "@/models/Conversation";
@@ -130,6 +130,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "POST", userId: session.user.id, requestId }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

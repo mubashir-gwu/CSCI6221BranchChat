@@ -8,6 +8,13 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useConversation } from "@/hooks/useConversation";
 import type { ConversationResponse } from "@/types/api";
 import { toast } from "sonner";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
+
+const BACKEND_DOWN_MESSAGE = "Backend services are unavailable. Please try again in a moment.";
+
+function isBackendDownError(err: unknown): boolean {
+  return (err as Error)?.name === "BackendUnavailableError";
+}
 
 interface ConversationItemProps {
   conversation: ConversationResponse;
@@ -33,7 +40,7 @@ export default function ConversationItem({
     }
 
     try {
-      const res = await fetch(`/api/conversations/${conversation.id}`, {
+      const res = await fetchOrThrowOnBackendDown(`/api/conversations/${conversation.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed }),
@@ -47,8 +54,8 @@ export default function ConversationItem({
         payload: { id: conversation.id, title: data.title, updatedAt: data.updatedAt },
       });
       setIsEditing(false);
-    } catch {
-      toast.error("Failed to rename conversation");
+    } catch (err) {
+      toast.error(isBackendDownError(err) ? BACKEND_DOWN_MESSAGE : "Failed to rename conversation");
       setEditTitle(conversation.title);
       setIsEditing(false);
     }
@@ -56,7 +63,7 @@ export default function ConversationItem({
 
   async function handleDelete() {
     try {
-      const res = await fetch(`/api/conversations/${conversation.id}`, {
+      const res = await fetchOrThrowOnBackendDown(`/api/conversations/${conversation.id}`, {
         method: "DELETE",
       });
 
@@ -69,8 +76,8 @@ export default function ConversationItem({
       }
 
       toast.success("Conversation deleted");
-    } catch {
-      toast.error("Failed to delete conversation");
+    } catch (err) {
+      toast.error(isBackendDownError(err) ? BACKEND_DOWN_MESSAGE : "Failed to delete conversation");
     }
   }
 

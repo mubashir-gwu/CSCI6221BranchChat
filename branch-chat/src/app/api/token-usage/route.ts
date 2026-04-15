@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { auth } from '@/lib/auth';
-import { connectDB } from '@/lib/db';
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from '@/lib/db';
 import { TokenUsage } from '@/models/TokenUsage';
 import { logger } from '@/lib/logger';
 
@@ -36,6 +36,9 @@ export async function GET() {
     });
   } catch (err: any) {
     logger.error('Route error', { context: { route, method: 'GET', userId: session.user.id, requestId }, error: err?.message, stack: err?.stack });
+    if (isBackendUnavailableError(err)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

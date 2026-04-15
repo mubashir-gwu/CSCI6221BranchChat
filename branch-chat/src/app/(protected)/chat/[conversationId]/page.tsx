@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { useConversation } from "@/hooks/useConversation";
 import { useUI } from "@/hooks/useUI";
 import { useActivePath } from "@/hooks/useActivePath";
@@ -15,6 +16,7 @@ import TreeSidebar from "@/components/tree/TreeSidebar";
 import { MODELS } from "@/constants/models";
 import type { TreeNode } from "@/types/tree";
 import type { NodeResponse } from "@/types/api";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
 
 function nodeResponseToTreeNode(n: NodeResponse): TreeNode {
   return {
@@ -45,15 +47,18 @@ export default function ChatPage() {
     abortStream,
   } = useStreamingChat();
   const [restoredMessage, setRestoredMessage] = useState('');
+  const [fatalError, setFatalError] = useState<Error | null>(null);
+  const [hasLoadedNodes, setHasLoadedNodes] = useState(false);
 
   // Load nodes on mount
   useEffect(() => {
     dispatch({ type: "SET_ACTIVE_CONVERSATION", payload: conversationId });
+    setHasLoadedNodes(false);
 
     async function loadNodes() {
       uiDispatch({ type: "SET_LOADING", payload: true });
       try {
-        const res = await fetch(`/api/conversations/${conversationId}/nodes`);
+        const res = await fetchOrThrowOnBackendDown(`/api/conversations/${conversationId}/nodes`);
         if (!res.ok) return;
         const data = await res.json();
         const nodesMap = new Map<string, TreeNode>();
@@ -103,10 +108,15 @@ export default function ChatPage() {
             }
           }
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error)?.name === "BackendUnavailableError") {
+          setFatalError(err as Error);
+          return;
+        }
         toast.error("Failed to load conversation");
       } finally {
         uiDispatch({ type: "SET_LOADING", payload: false });
+        setHasLoadedNodes(true);
       }
     }
 
@@ -213,7 +223,11 @@ export default function ChatPage() {
 
         if (result.type === 'error') {
           const errorMsg = result.message;
-          if (errorMsg.includes("not configured")) {
+          if (result.code === 'BACKEND_UNAVAILABLE') {
+            toast.error("Backend services are unavailable. Please try again in a moment.", {
+              action: { label: "Retry", onClick: retry },
+            });
+          } else if (errorMsg.includes("not configured")) {
             toast.error(`Provider ${provider} is not available.`);
           } else if (errorMsg.includes("Rate limited")) {
             toast.error(errorMsg, {
@@ -323,7 +337,7 @@ export default function ChatPage() {
       const fetchUrl = fromNodeId
         ? `/api/conversations/${conversationId}/export?fromNodeId=${encodeURIComponent(fromNodeId)}`
         : `/api/conversations/${conversationId}/export`;
-      const res = await fetch(fetchUrl);
+      const res = await fetchOrThrowOnBackendDown(fetchUrl);
       if (!res.ok) {
         toast.error("Failed to export conversation");
         return;
@@ -339,7 +353,11 @@ export default function ChatPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "BackendUnavailableError") {
+        setFatalError(err as Error);
+        return;
+      }
       toast.error("Network error. Please try again.");
     }
   }, [conversationId]);
@@ -347,7 +365,7 @@ export default function ChatPage() {
   const handleDeleteNode = useCallback(
     async (nodeId: string) => {
       try {
-        const res = await fetch(
+        const res = await fetchOrThrowOnBackendDown(
           `/api/conversations/${conversationId}/nodes/${nodeId}`,
           { method: "DELETE" }
         );
@@ -374,7 +392,11 @@ export default function ChatPage() {
           dispatch({ type: "SET_ACTIVE_NODE", payload: null });
           window.location.hash = "";
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error)?.name === "BackendUnavailableError") {
+          setFatalError(err as Error);
+          return;
+        }
         toast.error("Network error. Please try again.");
       }
     },
@@ -391,6 +413,8 @@ export default function ChatPage() {
     (m) => m.id === uiState.selectedModel
   );
   const thinkingDisabled = !selectedModelConfig?.supportsThinking;
+
+  if (fatalError) throw fatalError;
 
   const chatInputElement = (
     <ChatInput
@@ -445,9 +469,13 @@ export default function ChatPage() {
           </Button>
         </div>
         <div className="flex-1 overflow-hidden">
-          {chatPanelElement}
+          {hasLoadedNodes ? chatPanelElement : (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </div>
-        {chatInputElement}
+        {hasLoadedNodes && chatInputElement}
       </div>
       <TreeSidebar
         isOpen={uiState.isTreeOpen}

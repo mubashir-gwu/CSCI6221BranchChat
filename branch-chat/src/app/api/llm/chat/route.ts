@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from "@/lib/db";
 import { buildContext } from "@/lib/contextBuilder";
 import { getProvider } from "@/lib/providers";
 import { isProviderAvailable } from "@/lib/providers/availability";
@@ -357,10 +357,14 @@ export async function POST(request: Request) {
         } catch (err: any) {
           logger.error("LLM stream error", { context: { route, method: "POST", userId, requestId, conversationId }, provider, model, error: err?.message, stack: err?.stack });
 
+          const backendDown = isBackendUnavailableError(err);
           // Nothing saved to DB, just report the error
           controller.enqueue(
             encoder.encode(encodeSSEEvent('error', {
-              message: err?.message ?? 'Stream error',
+              message: backendDown
+                ? 'Backend services are unavailable'
+                : (err?.message ?? 'Stream error'),
+              code: backendDown ? 'BACKEND_UNAVAILABLE' : undefined,
               partial: accumulated.length > 0,
             }))
           );
@@ -383,6 +387,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     logger.error("Route error", { context: { route, method: "POST", requestId }, error: error?.message, stack: error?.stack });
+    if (isBackendUnavailableError(error)) {
+      return Response.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     if (error?.name === "CastError") {
       return Response.json({ error: "Invalid ID format" }, { status: 400 });
     }

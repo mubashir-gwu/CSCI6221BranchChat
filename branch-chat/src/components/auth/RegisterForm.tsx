@@ -33,6 +33,8 @@ export default function RegisterForm() {
       if (!res.ok) {
         if (res.status === 409) {
           setError("Email already exists");
+        } else if (res.status === 503 && data?.code === "BACKEND_UNAVAILABLE") {
+          setError("Backend services are unavailable. Please try again in a moment.");
         } else {
           setError(data.error || "Registration failed");
         }

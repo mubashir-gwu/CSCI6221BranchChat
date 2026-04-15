@@ -8,6 +8,13 @@ import { useConversation } from "@/hooks/useConversation";
 import ConversationItem from "@/components/sidebar/ConversationItem";
 import { MODELS } from "@/constants/models";
 import { toast } from "sonner";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
+
+const BACKEND_DOWN_MESSAGE = "Backend services are unavailable. Please try again in a moment.";
+
+function isBackendDownError(err: unknown): boolean {
+  return (err as Error)?.name === "BackendUnavailableError";
+}
 
 export default function ConversationList() {
   const { state, dispatch } = useConversation();
@@ -28,7 +35,7 @@ export default function ConversationList() {
         return;
       }
 
-      const res = await fetch("/api/import", {
+      const res = await fetchOrThrowOnBackendDown("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jsonData }),
@@ -55,8 +62,8 @@ export default function ConversationList() {
       });
       toast.success(`Imported "${data.title}" (${data.nodeCount} nodes)`);
       router.push(`/chat/${data.conversationId}`);
-    } catch {
-      toast.error("Failed to import conversation");
+    } catch (err) {
+      toast.error(isBackendDownError(err) ? BACKEND_DOWN_MESSAGE : "Failed to import conversation");
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -66,7 +73,7 @@ export default function ConversationList() {
   async function handleCreate() {
     setCreating(true);
     try {
-      const res = await fetch("/api/conversations", {
+      const res = await fetchOrThrowOnBackendDown("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,8 +88,8 @@ export default function ConversationList() {
       const data = await res.json();
       dispatch({ type: "ADD_CONVERSATION", payload: data });
       router.push(`/chat/${data.id}`);
-    } catch {
-      toast.error("Failed to create conversation");
+    } catch (err) {
+      toast.error(isBackendDownError(err) ? BACKEND_DOWN_MESSAGE : "Failed to create conversation");
     } finally {
       setCreating(false);
     }

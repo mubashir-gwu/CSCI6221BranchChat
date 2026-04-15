@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PROVIDERS } from "@/constants/providers";
 import { MODELS } from "@/constants/models";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
 
 interface UsageEntry {
   model: string;
@@ -19,13 +20,14 @@ export default function TokenUsageCard() {
   const [usage, setUsage] = useState<UsageEntry[]>([]);
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fatalError, setFatalError] = useState<Error | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
         const [usageRes, providersRes] = await Promise.all([
-          fetch("/api/token-usage"),
-          fetch("/api/providers"),
+          fetchOrThrowOnBackendDown("/api/token-usage"),
+          fetchOrThrowOnBackendDown("/api/providers"),
         ]);
 
         if (usageRes.ok) {
@@ -36,7 +38,11 @@ export default function TokenUsageCard() {
           const data = await providersRes.json();
           setAvailableProviders(data.providers);
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error)?.name === "BackendUnavailableError") {
+          setFatalError(err as Error);
+          return;
+        }
         // Silently fail — page will show empty state
       } finally {
         setLoading(false);
@@ -45,6 +51,8 @@ export default function TokenUsageCard() {
 
     fetchData();
   }, []);
+
+  if (fatalError) throw fatalError;
 
   const modelDisplayNames = useMemo(() => {
     const map: Record<string, string> = {};

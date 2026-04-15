@@ -1,8 +1,10 @@
 "use client";
 
-import { useReducer, useMemo, useEffect, useCallback, useRef } from "react";
+import { useReducer, useMemo, useEffect, useCallback, useRef, useState } from "react";
 import { UIContext, UIState, UIAction } from "@/contexts/UIContext";
 import { MODELS } from "@/constants/models";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
+import BackendStatusGate from "@/components/common/BackendStatusGate";
 
 const initialState: UIState = {
   isLoading: false,
@@ -66,9 +68,11 @@ export default function UIProvider({
     selectedProviderRef.current = state.selectedProvider;
   }, [state.selectedProvider]);
 
+  const [backendDown, setBackendDown] = useState(false);
+
   const refreshProviders = useCallback(async () => {
     try {
-      const res = await fetch("/api/providers");
+      const res = await fetchOrThrowOnBackendDown("/api/providers");
       if (!res.ok) return;
       const data = await res.json();
       const providers: string[] = data.providers;
@@ -90,7 +94,11 @@ export default function UIProvider({
           payload: { provider: "", model: "" },
         });
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "BackendUnavailableError") {
+        setBackendDown(true);
+        return;
+      }
       // Silently fail
     }
   }, []);
@@ -114,6 +122,15 @@ export default function UIProvider({
   }, [state.selectedModel, state.selectedProvider]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
+
+  const handleRecover = useCallback(() => {
+    setBackendDown(false);
+    refreshProviders();
+  }, [refreshProviders]);
+
+  if (backendDown) {
+    return <BackendStatusGate onRecover={handleRecover} />;
+  }
 
   return (
     <UIContext.Provider value={value}>

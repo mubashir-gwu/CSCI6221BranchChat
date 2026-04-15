@@ -6,16 +6,18 @@ import { Button } from "@/components/ui/button";
 import { useConversation } from "@/hooks/useConversation";
 import { MODELS } from "@/constants/models";
 import { toast } from "sonner";
+import { fetchOrThrowOnBackendDown } from "@/lib/fetchClient";
 
 export default function DashboardPage() {
   const { state, dispatch } = useConversation();
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [fatalError, setFatalError] = useState<Error | null>(null);
 
   async function handleCreateConversation() {
     setCreating(true);
     try {
-      const res = await fetch("/api/conversations", {
+      const res = await fetchOrThrowOnBackendDown("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -30,12 +32,18 @@ export default function DashboardPage() {
       const data = await res.json();
       dispatch({ type: "ADD_CONVERSATION", payload: data });
       router.push(`/chat/${data.id}`);
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "BackendUnavailableError") {
+        setFatalError(err as Error);
+        return;
+      }
       toast.error("Failed to create conversation");
     } finally {
       setCreating(false);
     }
   }
+
+  if (fatalError) throw fatalError;
 
   return (
     <div className="flex h-full items-center justify-center p-8">

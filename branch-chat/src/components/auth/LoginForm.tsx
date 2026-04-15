@@ -29,7 +29,17 @@ export default function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        const code = (result as { code?: string }).code;
+        const isBackendDown =
+          code === "BackendUnavailable" ||
+          /backendunavailable/i.test(result.error);
+        if (isBackendDown) {
+          setError(
+            "Backend services are unavailable. Please try again in a moment."
+          );
+        } else {
+          setError("Invalid email or password");
+        }
       } else {
         router.push("/dashboard");
       }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { connectDB } from '@/lib/db';
+import { connectDB, isBackendUnavailableError, BACKEND_UNAVAILABLE_RESPONSE } from '@/lib/db';
 import { User } from '@/models/User';
 import { logger } from '@/lib/logger';
 
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
     );
   } catch (err: any) {
     logger.error('Route error', { context: { route, method: 'POST', requestId }, error: err?.message, stack: err?.stack });
+    if (isBackendUnavailableError(err)) {
+      return NextResponse.json(BACKEND_UNAVAILABLE_RESPONSE.body, { status: BACKEND_UNAVAILABLE_RESPONSE.status });
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -13,6 +13,16 @@ class BackendUnavailableSignin extends CredentialsSignin {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  logger: {
+    error(error) {
+      // CredentialsSignin is the expected signal for a failed login; swallow
+      // it so invalid-password attempts don't dump a stack trace to the console.
+      if (error instanceof CredentialsSignin || error?.name === 'CredentialsSignin') return;
+      logger.error('NextAuth error', { error: error?.message, stack: error?.stack });
+    },
+    warn(code) { logger.warn('NextAuth warning', { code }); },
+    debug() {},
+  },
   providers: [
     Credentials({
       name: 'credentials',

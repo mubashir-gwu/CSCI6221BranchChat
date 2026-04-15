@@ -29,8 +29,8 @@ export default function ThinkingBlock({ content, isStreaming }: ThinkingBlockPro
         </span>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-200 ${
-          isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+        className={`transition-all duration-200 ${
+          isExpanded ? "max-h-[60vh] overflow-y-auto opacity-100" : "max-h-0 overflow-hidden opacity-0"
         }`}
       >
         <div className="mt-1 border-l-2 border-muted pl-3 text-sm text-muted-foreground whitespace-pre-wrap">
